@@ -1,3 +1,4 @@
+use lox::token::Token;
 use std::{env, io::Write, process};
 
 fn report(line: usize, where_: &str, message: &str) {
@@ -7,9 +8,6 @@ fn report(line: usize, where_: &str, message: &str) {
 fn error(line: usize, message: &str) {
     report(line, "", message);
 }
-
-#[derive(Debug)]
-struct Token;
 
 struct Scanner;
 
