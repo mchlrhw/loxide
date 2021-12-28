@@ -1,6 +1,30 @@
 use itertools::{Itertools, MultiPeek};
 use lox::token::{Token, TokenType};
-use std::{env, io::Write, process, str::Chars};
+use once_cell::sync::Lazy;
+use std::{collections::HashMap, env, io::Write, process, str::Chars};
+
+static KEYWORDS: Lazy<HashMap<&str, TokenType>> = Lazy::new(|| {
+    let mut m = HashMap::new();
+
+    m.insert("and", TokenType::And);
+    m.insert("class", TokenType::Class);
+    m.insert("else", TokenType::Else);
+    m.insert("false", TokenType::False);
+    m.insert("for", TokenType::For);
+    m.insert("fun", TokenType::Fun);
+    m.insert("if", TokenType::If);
+    m.insert("nil", TokenType::Nil);
+    m.insert("or", TokenType::Or);
+    m.insert("print", TokenType::Print);
+    m.insert("return", TokenType::Return);
+    m.insert("super", TokenType::Super);
+    m.insert("this", TokenType::This);
+    m.insert("true", TokenType::True);
+    m.insert("var", TokenType::Var);
+    m.insert("while", TokenType::While);
+
+    m
+});
 
 fn report(line: usize, where_: &str, message: &str) {
     println!("[line {}] Error{}: {}", line, where_, message);
@@ -117,6 +141,21 @@ impl<'a> Scanner<'a> {
         self.add_token(TokenType::Number(value));
     }
 
+    fn identifier(&mut self) {
+        while let Some(c) = self.chars.peek() {
+            if *c == '_' || c.is_alphanumeric() {
+                self.advance();
+            } else {
+                break;
+            }
+        }
+
+        let lexeme = &self.source[self.start..self.current];
+        let typ = KEYWORDS.get(lexeme).unwrap_or(&TokenType::Identifier);
+
+        self.add_token(typ.clone());
+    }
+
     fn scan_token(&mut self) {
         let c = self.advance();
         match c {
@@ -178,6 +217,7 @@ impl<'a> Scanner<'a> {
             '\n' => self.line += 1,
             '"' => self.string(),
             c if c.is_digit(10) => self.number(),
+            c if c == '_' || c.is_alphabetic() => self.identifier(),
             _ => error(self.line, "Unexpected character."),
         }
     }
