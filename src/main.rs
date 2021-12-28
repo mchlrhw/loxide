@@ -92,6 +92,22 @@ impl<'a> Scanner<'a> {
                 };
                 self.add_token(typ);
             }
+            '<' => {
+                let typ = if self.is_match('=') {
+                    TokenType::LessEqual
+                } else {
+                    TokenType::Less
+                };
+                self.add_token(typ);
+            }
+            '>' => {
+                let typ = if self.is_match('=') {
+                    TokenType::GreaterEqual
+                } else {
+                    TokenType::Greater
+                };
+                self.add_token(typ);
+            }
             ' ' | '\r' | '\t' => {} // Ignore whitespace.
             '\n' => self.line += 1,
             _ => error(self.line, "Unexpected character."),
