@@ -1,5 +1,6 @@
+use itertools::{Itertools, MultiPeek};
 use lox::token::{Token, TokenType};
-use std::{env, io::Write, iter::Peekable, process, str::Chars};
+use std::{env, io::Write, process, str::Chars};
 
 fn report(line: usize, where_: &str, message: &str) {
     println!("[line {}] Error{}: {}", line, where_, message);
@@ -11,7 +12,7 @@ fn error(line: usize, message: &str) {
 
 struct Scanner<'a> {
     source: &'a str,
-    chars: Peekable<Chars<'a>>,
+    chars: MultiPeek<Chars<'a>>,
     tokens: Vec<Token<'a>>,
     start: usize,
     current: usize,
@@ -20,7 +21,7 @@ struct Scanner<'a> {
 
 impl<'a> Scanner<'a> {
     fn new(source: &'a str) -> Self {
-        let chars = source.chars().peekable();
+        let chars = source.chars().multipeek();
 
         Self {
             source,
@@ -85,6 +86,37 @@ impl<'a> Scanner<'a> {
         self.add_token(TokenType::String(value.to_string()));
     }
 
+    fn number(&mut self) {
+        while let Some(c) = self.chars.peek() {
+            if !c.is_digit(10) {
+                self.chars.reset_peek();
+                break;
+            }
+            self.advance();
+        }
+
+        if let Some('.') = self.chars.peek() {
+            match self.chars.peek() {
+                Some(c) if c.is_digit(10) => {
+                    self.advance();
+
+                    while let Some(c) = self.chars.peek() {
+                        if !c.is_digit(10) {
+                            break;
+                        }
+                        self.advance();
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        let lexeme = &self.source[self.start..self.current];
+        let value = lexeme.parse().expect("must have a valid double");
+
+        self.add_token(TokenType::Number(value));
+    }
+
     fn scan_token(&mut self) {
         let c = self.advance();
         match c {
@@ -135,9 +167,8 @@ impl<'a> Scanner<'a> {
                     while let Some(c) = self.chars.peek() {
                         if *c == '\n' {
                             break;
-                        } else {
-                            self.advance();
                         }
+                        self.advance();
                     }
                 } else {
                     self.add_token(TokenType::Slash);
@@ -146,6 +177,7 @@ impl<'a> Scanner<'a> {
             ' ' | '\r' | '\t' => {} // Ignore whitespace.
             '\n' => self.line += 1,
             '"' => self.string(),
+            c if c.is_digit(10) => self.number(),
             _ => error(self.line, "Unexpected character."),
         }
     }
