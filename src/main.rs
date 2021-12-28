@@ -63,6 +63,28 @@ impl<'a> Scanner<'a> {
         self.tokens.push(token);
     }
 
+    fn string(&mut self) {
+        while let Some(c) = self.chars.peek() {
+            if *c == '"' {
+                break;
+            } else if *c == '\n' {
+                self.line += 1;
+            }
+            self.advance();
+        }
+
+        if self.is_at_end() {
+            error(self.line, "Unterminated string.");
+            return;
+        }
+
+        self.advance(); // The closing ".
+
+        // Trim the surrounding quotes.
+        let value = &self.source[self.start + 1..self.current - 1];
+        self.add_token(TokenType::String(value.to_string()));
+    }
+
     fn scan_token(&mut self) {
         let c = self.advance();
         match c {
@@ -108,8 +130,22 @@ impl<'a> Scanner<'a> {
                 };
                 self.add_token(typ);
             }
+            '/' => {
+                if self.is_match('/') {
+                    while let Some(c) = self.chars.peek() {
+                        if *c == '\n' {
+                            break;
+                        } else {
+                            self.advance();
+                        }
+                    }
+                } else {
+                    self.add_token(TokenType::Slash);
+                }
+            }
             ' ' | '\r' | '\t' => {} // Ignore whitespace.
             '\n' => self.line += 1,
+            '"' => self.string(),
             _ => error(self.line, "Unexpected character."),
         }
     }
