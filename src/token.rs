@@ -1,4 +1,12 @@
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
+pub enum Literal {
+    String(String),
+    Number(f64),
+    Boolean(bool),
+    Nil,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen,
@@ -25,8 +33,8 @@ pub enum TokenType {
 
     // Literals.
     Identifier,
-    String(String),
-    Number(f64),
+    String,
+    Number,
 
     // Keywords.
     And,
@@ -49,15 +57,29 @@ pub enum TokenType {
     Eof,
 }
 
-#[derive(Debug)]
-pub struct Token<'a> {
+#[derive(Clone, Debug)]
+pub struct Token {
     typ: TokenType,
-    lexeme: &'a str,
+    lexeme: String,
+    literal: Option<Literal>,
     line: usize,
 }
 
-impl<'a> Token<'a> {
-    pub fn new(typ: TokenType, lexeme: &'a str, line: usize) -> Self {
-        Self { typ, lexeme, line }
+impl Token {
+    pub fn new(typ: TokenType, lexeme: &str, literal: Option<Literal>, line: usize) -> Self {
+        Self {
+            typ,
+            lexeme: lexeme.to_string(),
+            literal,
+            line,
+        }
+    }
+
+    pub fn typ(&self) -> &TokenType {
+        &self.typ
+    }
+
+    pub fn literal(&self) -> &Option<Literal> {
+        &self.literal
     }
 }

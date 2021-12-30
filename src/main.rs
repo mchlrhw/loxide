@@ -1,12 +1,15 @@
-use lox::scanner::Scanner;
+use lox::{parser::Parser, scanner::Scanner};
 use std::{env, io::Write, process};
 
 fn run(source: &str) -> anyhow::Result<()> {
     let mut scanner = Scanner::new(source);
 
-    for token in scanner.scan() {
-        println!("{:?}", token);
-    }
+    let tokens = scanner.scan();
+    let mut parser = Parser::new(tokens);
+
+    let expr = parser.parse();
+
+    println!("{:?}", expr);
 
     Ok(())
 }

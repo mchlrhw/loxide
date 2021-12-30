@@ -1,4 +1,4 @@
-use crate::token::{Token, TokenType};
+use crate::token::{Literal, Token, TokenType};
 use itertools::{Itertools, MultiPeek};
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, str::Chars};
@@ -29,7 +29,7 @@ static KEYWORDS: Lazy<HashMap<&str, TokenType>> = Lazy::new(|| {
 pub struct Scanner<'a> {
     source: &'a str,
     chars: MultiPeek<Chars<'a>>,
-    tokens: Vec<Token<'a>>,
+    tokens: Vec<Token>,
     start: usize,
     current: usize,
     line: usize,
@@ -74,9 +74,9 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn add_token(&mut self, typ: TokenType) {
+    fn add_token(&mut self, typ: TokenType, literal: Option<Literal>) {
         let lexeme = &self.source[self.start..self.current];
-        let token = Token::new(typ, lexeme, self.line);
+        let token = Token::new(typ, lexeme, literal, self.line);
         self.tokens.push(token);
     }
 
@@ -99,7 +99,7 @@ impl<'a> Scanner<'a> {
 
         // Trim the surrounding quotes.
         let value = &self.source[self.start + 1..self.current - 1];
-        self.add_token(TokenType::String(value.to_string()));
+        self.add_token(TokenType::String, Some(Literal::String(value.to_string())));
     }
 
     fn number(&mut self) {
@@ -130,7 +130,7 @@ impl<'a> Scanner<'a> {
         let lexeme = &self.source[self.start..self.current];
         let value = lexeme.parse().expect("must have a valid double");
 
-        self.add_token(TokenType::Number(value));
+        self.add_token(TokenType::Number, Some(Literal::Number(value)));
     }
 
     fn identifier(&mut self) {
@@ -145,29 +145,29 @@ impl<'a> Scanner<'a> {
         let lexeme = &self.source[self.start..self.current];
         let typ = KEYWORDS.get(lexeme).unwrap_or(&TokenType::Identifier);
 
-        self.add_token(typ.clone());
+        self.add_token(typ.clone(), None);
     }
 
     fn scan_token(&mut self) {
         let c = self.advance();
         match c {
-            '(' => self.add_token(TokenType::LeftParen),
-            ')' => self.add_token(TokenType::RightParen),
-            '{' => self.add_token(TokenType::LeftBrace),
-            '}' => self.add_token(TokenType::RightBrace),
-            ',' => self.add_token(TokenType::Comma),
-            '.' => self.add_token(TokenType::Dot),
-            '-' => self.add_token(TokenType::Minus),
-            '+' => self.add_token(TokenType::Plus),
-            ';' => self.add_token(TokenType::Semicolon),
-            '*' => self.add_token(TokenType::Star),
+            '(' => self.add_token(TokenType::LeftParen, None),
+            ')' => self.add_token(TokenType::RightParen, None),
+            '{' => self.add_token(TokenType::LeftBrace, None),
+            '}' => self.add_token(TokenType::RightBrace, None),
+            ',' => self.add_token(TokenType::Comma, None),
+            '.' => self.add_token(TokenType::Dot, None),
+            '-' => self.add_token(TokenType::Minus, None),
+            '+' => self.add_token(TokenType::Plus, None),
+            ';' => self.add_token(TokenType::Semicolon, None),
+            '*' => self.add_token(TokenType::Star, None),
             '!' => {
                 let typ = if self.is_match('=') {
                     TokenType::BangEqual
                 } else {
                     TokenType::Bang
                 };
-                self.add_token(typ);
+                self.add_token(typ, None);
             }
             '=' => {
                 let typ = if self.is_match('=') {
@@ -175,7 +175,7 @@ impl<'a> Scanner<'a> {
                 } else {
                     TokenType::Equal
                 };
-                self.add_token(typ);
+                self.add_token(typ, None);
             }
             '<' => {
                 let typ = if self.is_match('=') {
@@ -183,7 +183,7 @@ impl<'a> Scanner<'a> {
                 } else {
                     TokenType::Less
                 };
-                self.add_token(typ);
+                self.add_token(typ, None);
             }
             '>' => {
                 let typ = if self.is_match('=') {
@@ -191,7 +191,7 @@ impl<'a> Scanner<'a> {
                 } else {
                     TokenType::Greater
                 };
-                self.add_token(typ);
+                self.add_token(typ, None);
             }
             '/' => {
                 if self.is_match('/') {
@@ -202,7 +202,7 @@ impl<'a> Scanner<'a> {
                         self.advance();
                     }
                 } else {
-                    self.add_token(TokenType::Slash);
+                    self.add_token(TokenType::Slash, None);
                 }
             }
             ' ' | '\r' | '\t' => {} // Ignore whitespace.
@@ -214,13 +214,14 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub fn scan(&'a mut self) -> &'a [Token<'a>] {
+    pub fn scan(&'a mut self) -> &'a [Token] {
         while !self.is_at_end() {
             self.start = self.current;
             self.scan_token();
         }
 
-        self.tokens.push(Token::new(TokenType::Eof, "", self.line));
+        self.tokens
+            .push(Token::new(TokenType::Eof, "", None, self.line));
 
         &self.tokens
     }
