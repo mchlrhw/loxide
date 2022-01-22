@@ -145,7 +145,7 @@ impl<'a> Scanner<'a> {
         let lexeme = &self.source[self.start..self.current];
         let typ = KEYWORDS.get(lexeme).unwrap_or(&TokenType::Identifier);
 
-        self.add_token(typ.clone(), None);
+        self.add_token(*typ, None);
     }
 
     fn scan_token(&mut self) {

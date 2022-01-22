@@ -1,5 +1,11 @@
-use crate::ast::Expr;
 use crate::token::{Literal, Token, TokenType};
+use crate::{ast::Expr, report};
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("parse error")]
+    ParseError,
+}
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -34,17 +40,17 @@ impl Parser {
         self.previous()
     }
 
-    fn check(&self, typ: &TokenType) -> bool {
+    fn check(&self, typ: TokenType) -> bool {
         if self.is_at_end() {
             false
         } else {
-            self.peek().typ() == typ
+            self.peek().typ() == &typ
         }
     }
 
     fn is_match(&mut self, types: &[TokenType]) -> bool {
         for typ in types {
-            if self.check(typ) {
+            if self.check(*typ) {
                 self.advance();
                 return true;
             }
@@ -53,63 +59,85 @@ impl Parser {
         false
     }
 
-    fn primary(&mut self) -> Expr {
+    fn error(&mut self, token: Token, message: &str) {
+        if token.typ() == &TokenType::Eof {
+            report(token.line(), " at end", message);
+        } else {
+            let lexeme = token.lexeme();
+            report(token.line(), &format!(" at '{lexeme}'"), message);
+        };
+    }
+
+    fn consume(&mut self, typ: TokenType, message: &str) -> Result<Token, Error> {
+        if self.check(typ) {
+            return Ok(self.advance());
+        }
+
+        self.error(self.peek(), message);
+
+        Err(Error::ParseError)
+    }
+
+    fn primary(&mut self) -> Result<Expr, Error> {
         if self.is_match(&[TokenType::False]) {
-            return Expr::Literal(Literal::Boolean(false));
+            Ok(Expr::Literal(Literal::Boolean(false)))
         } else if self.is_match(&[TokenType::True]) {
-            return Expr::Literal(Literal::Boolean(true));
+            Ok(Expr::Literal(Literal::Boolean(true)))
         } else if self.is_match(&[TokenType::Nil]) {
-            return Expr::Literal(Literal::Nil);
+            Ok(Expr::Literal(Literal::Nil))
         } else if self.is_match(&[TokenType::Number, TokenType::String]) {
-            return Expr::Literal(
+            Ok(Expr::Literal(
                 self.previous()
                     .literal()
                     .clone()
                     .expect("must have a literal"),
-            );
+            ))
         } else if self.is_match(&[TokenType::LeftParen]) {
-            todo!()
+            let expr = self.expression()?;
+            self.consume(TokenType::RightParen, "Expect ')' after expression")?;
+
+            Ok(Expr::Grouping(Box::new(expr)))
         } else {
-            todo!()
+            Err(Error::ParseError)
         }
     }
 
-    fn unary(&mut self) -> Expr {
+    fn unary(&mut self) -> Result<Expr, Error> {
         if self.is_match(&[TokenType::Bang, TokenType::Minus]) {
             let operator = self.previous();
-            let right = self.unary();
-            return Expr::Unary(operator, Box::new(right));
+            let right = self.unary()?;
+            return Ok(Expr::Unary(operator, Box::new(right)));
         }
 
         self.primary()
     }
 
-    fn factor(&mut self) -> Expr {
-        let mut expr = self.unary();
+    fn factor(&mut self) -> Result<Expr, Error> {
+        let mut expr = self.unary()?;
 
         while self.is_match(&[TokenType::Slash, TokenType::Star]) {
             let operator = self.previous();
-            let right = self.unary();
+            let right = self.unary()?;
             expr = Expr::Binary(Box::new(expr), operator, Box::new(right));
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn term(&mut self) -> Expr {
-        let mut expr = self.factor();
+    fn term(&mut self) -> Result<Expr, Error> {
+        let mut expr = self.factor()?;
 
         while self.is_match(&[TokenType::Minus, TokenType::Plus]) {
             let operator = self.previous();
-            let right = self.factor();
+            let right = self.factor()?;
             expr = Expr::Binary(Box::new(expr), operator, Box::new(right));
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn comparison(&mut self) -> Expr {
-        let mut expr = self.term();
+    fn comparison(&mut self) -> Result<Expr, Error> {
+        let mut expr = self.term()?;
 
         while self.is_match(&[
             TokenType::Greater,
@@ -118,30 +146,30 @@ impl Parser {
             TokenType::LessEqual,
         ]) {
             let operator = self.previous();
-            let right = self.term();
+            let right = self.term()?;
             expr = Expr::Binary(Box::new(expr), operator, Box::new(right));
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn equality(&mut self) -> Expr {
-        let mut expr = self.comparison();
+    fn equality(&mut self) -> Result<Expr, Error> {
+        let mut expr = self.comparison()?;
 
         while self.is_match(&[TokenType::BangEqual, TokenType::EqualEqual]) {
             let operator = self.previous();
-            let right = self.comparison();
+            let right = self.comparison()?;
             expr = Expr::Binary(Box::new(expr), operator, Box::new(right));
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn expression(&mut self) -> Expr {
+    fn expression(&mut self) -> Result<Expr, Error> {
         self.equality()
     }
 
-    pub fn parse(&mut self) -> Expr {
+    pub fn parse(&mut self) -> Result<Expr, Error> {
         self.expression()
     }
 }

@@ -6,7 +6,7 @@ pub enum Literal {
     Nil,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen,
@@ -79,7 +79,15 @@ impl Token {
         &self.typ
     }
 
+    pub fn lexeme(&self) -> &str {
+        &self.lexeme
+    }
+
     pub fn literal(&self) -> &Option<Literal> {
         &self.literal
+    }
+
+    pub fn line(&self) -> usize {
+        self.line
     }
 }
