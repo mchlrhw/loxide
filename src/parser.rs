@@ -98,6 +98,8 @@ impl Parser {
 
             Ok(Expr::Grouping(Box::new(expr)))
         } else {
+            self.error(self.peek(), "Expect expression.");
+
             Err(Error::ParseError)
         }
     }
