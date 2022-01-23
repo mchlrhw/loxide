@@ -1,4 +1,4 @@
-use lox::{parser::Parser, scanner::Scanner};
+use lox::{interpreter::Interpreter, parser::Parser, scanner::Scanner};
 use std::{env, io::Write, process};
 
 fn run(source: &str) -> anyhow::Result<()> {
@@ -8,7 +8,7 @@ fn run(source: &str) -> anyhow::Result<()> {
     let mut parser = Parser::new(tokens);
 
     if let Ok(expr) = parser.parse() {
-        println!("{expr:?}");
+        let _res = Interpreter::new().interpret(expr);
     }
 
     Ok(())

@@ -1,9 +1,22 @@
+use std::fmt;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Literal {
     String(String),
     Number(f64),
     Boolean(bool),
     Nil,
+}
+
+impl fmt::Display for Literal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::String(s) => write!(f, "{s}"),
+            Self::Number(n) => write!(f, "{n}"),
+            Self::Boolean(b) => write!(f, "{b}"),
+            Self::Nil => write!(f, "nil"),
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
