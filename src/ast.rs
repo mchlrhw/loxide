@@ -7,3 +7,9 @@ pub enum Expr {
     Unary(Token, Box<Expr>),
     Binary(Box<Expr>, Token, Box<Expr>),
 }
+
+#[derive(Debug)]
+pub enum Stmt {
+    Expression(Expr),
+    Print(Expr),
+}

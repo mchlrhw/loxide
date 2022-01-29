@@ -1,5 +1,5 @@
 use crate::{
-    ast::Expr,
+    ast::{Expr, Stmt},
     token::{Literal, Token, TokenType},
 };
 
@@ -103,7 +103,7 @@ impl Interpreter {
                         if let (Literal::Number(left), Literal::Number(right)) =
                             (left.clone(), right.clone())
                         {
-                            Ok(Literal::Number(left - right))
+                            Ok(Literal::Number(left + right))
                         } else {
                             if let (Literal::String(left), Literal::String(right)) = (left, right) {
                                 Ok(Literal::String(format!("{left}{right}")))
@@ -133,10 +133,25 @@ impl Interpreter {
         }
     }
 
-    pub fn interpret(&self, expr: Expr) {
-        match self.evaluate(expr) {
-            Ok(value) => println!("{value}"),
-            Err(error) => println!("{error}"),
+    fn execute(&self, stmt: Stmt) -> Result<(), Error> {
+        match stmt {
+            Stmt::Expression(expression) => {
+                self.evaluate(expression)?;
+            }
+            Stmt::Print(expression) => {
+                let value = self.evaluate(expression)?;
+                println!("{value}");
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn interpret(&self, statements: Vec<Stmt>) {
+        for statement in statements {
+            if let Err(error) = self.execute(statement) {
+                println!("{error}");
+            }
         }
     }
 }

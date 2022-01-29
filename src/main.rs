@@ -7,8 +7,8 @@ fn run(source: &str) -> anyhow::Result<()> {
     let tokens = scanner.scan();
     let mut parser = Parser::new(tokens);
 
-    if let Ok(expr) = parser.parse() {
-        Interpreter::new().interpret(expr);
+    if let Ok(statements) = parser.parse() {
+        Interpreter::new().interpret(statements);
     }
 
     Ok(())
