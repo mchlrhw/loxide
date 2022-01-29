@@ -76,6 +76,8 @@ impl Interpreter {
                             Err(Error::Runtime)
                         }
                     }
+                    TokenType::EqualEqual => Ok(Literal::Boolean(left == right)),
+                    TokenType::BangEqual => Ok(Literal::Boolean(left != right)),
                     TokenType::Minus => {
                         if let (Literal::Number(left), Literal::Number(right)) = (left, right) {
                             Ok(Literal::Number(left - right))
