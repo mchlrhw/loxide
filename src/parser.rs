@@ -4,7 +4,7 @@ use crate::{
     report,
 };
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Clone, Debug, thiserror::Error)]
 pub enum Error {
     #[error("parse error")]
     ParseError,
@@ -81,6 +81,30 @@ impl Parser {
         Err(Error::ParseError)
     }
 
+    fn synchronize(&mut self) {
+        self.advance();
+
+        while !self.is_at_end() {
+            if self.previous().typ() == &TokenType::Semicolon
+                || [
+                    TokenType::Class,
+                    TokenType::For,
+                    TokenType::Fun,
+                    TokenType::If,
+                    TokenType::Print,
+                    TokenType::Return,
+                    TokenType::Var,
+                    TokenType::While,
+                ]
+                .contains(self.peek().typ())
+            {
+                break;
+            }
+
+            self.advance();
+        }
+    }
+
     fn primary(&mut self) -> Result<Expr, Error> {
         if self.is_match(&[TokenType::False]) {
             Ok(Expr::Literal(Literal::Boolean(false)))
@@ -95,6 +119,8 @@ impl Parser {
                     .clone()
                     .expect("must have a literal"),
             ))
+        } else if self.is_match(&[TokenType::Identifier]) {
+            Ok(Expr::Variable(self.previous()))
         } else if self.is_match(&[TokenType::LeftParen]) {
             let expr = self.expression()?;
             self.consume(TokenType::RightParen, "Expect ')' after expression")?;
@@ -198,10 +224,48 @@ impl Parser {
         Ok(stmt)
     }
 
+    fn var_declaration(&mut self) -> Result<Stmt, Error> {
+        let name = self
+            .consume(TokenType::Identifier, "Expect variable name.")?
+            .lexeme()
+            .to_string();
+
+        let mut initializer = None;
+        if self.is_match(&[TokenType::Equal]) {
+            initializer = Some(self.expression()?);
+        }
+
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' after variable declaration.",
+        )?;
+
+        Ok(Stmt::Var { name, initializer })
+    }
+
+    fn declaration(&mut self) -> Option<Stmt> {
+        let res = if self.is_match(&[TokenType::Var]) {
+            self.var_declaration()
+        } else {
+            self.statement()
+        };
+
+        match res {
+            Err(_) => {
+                self.synchronize();
+
+                None
+            }
+            Ok(stmt) => Some(stmt),
+        }
+    }
+
     pub fn parse(&mut self) -> Result<Vec<Stmt>, Error> {
         let mut statements = vec![];
         while !self.is_at_end() {
-            statements.push(self.statement()?);
+            if let Some(stmt) = self.declaration() {
+                statements.push(stmt);
+            }
         }
 
         Ok(statements)

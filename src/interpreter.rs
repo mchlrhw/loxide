@@ -2,11 +2,37 @@ use crate::{
     ast::{Expr, Stmt},
     token::{Literal, Token, TokenType},
 };
+use std::collections::HashMap;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("{message}\n[line {line}]")]
     Runtime { message: String, line: usize },
+}
+
+struct Environment {
+    values: HashMap<String, Literal>,
+}
+
+impl Environment {
+    fn new() -> Self {
+        Self {
+            values: HashMap::new(),
+        }
+    }
+
+    fn define(&mut self, name: &str, value: &Literal) {
+        self.values.insert(name.to_string(), value.clone());
+    }
+
+    fn get(&self, name: &Token) -> Result<Literal, Error> {
+        let lexeme = name.lexeme();
+
+        self.values.get(lexeme).cloned().ok_or(Error::Runtime {
+            message: format!("Undefined variable '{lexeme}'."),
+            line: name.line(),
+        })
+    }
 }
 
 fn is_truthy(literal: Literal) -> bool {
@@ -43,11 +69,15 @@ fn check_number_operands(
     }
 }
 
-pub struct Interpreter;
+pub struct Interpreter {
+    environment: Environment,
+}
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self
+        let environment = Environment::new();
+
+        Self { environment }
     }
 
     fn evaluate(&self, expr: Expr) -> Result<Literal, Error> {
@@ -130,10 +160,11 @@ impl Interpreter {
                     typ => panic!("{typ:?} is not a valid binary operator."),
                 }
             }
+            Expr::Variable(name) => self.environment.get(&name),
         }
     }
 
-    fn execute(&self, stmt: Stmt) -> Result<(), Error> {
+    fn execute(&mut self, stmt: Stmt) -> Result<(), Error> {
         match stmt {
             Stmt::Expression(expression) => {
                 self.evaluate(expression)?;
@@ -142,12 +173,21 @@ impl Interpreter {
                 let value = self.evaluate(expression)?;
                 println!("{value}");
             }
+            Stmt::Var { name, initializer } => {
+                let value = if let Some(initializer) = initializer {
+                    self.evaluate(initializer)?
+                } else {
+                    Literal::Nil
+                };
+
+                self.environment.define(&name, &value);
+            }
         }
 
         Ok(())
     }
 
-    pub fn interpret(&self, statements: Vec<Stmt>) {
+    pub fn interpret(&mut self, statements: Vec<Stmt>) {
         for statement in statements {
             if let Err(error) = self.execute(statement) {
                 println!("{error}");

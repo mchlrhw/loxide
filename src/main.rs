@@ -1,20 +1,22 @@
 use lox::{interpreter::Interpreter, parser::Parser, scanner::Scanner};
 use std::{env, io::Write, process};
 
-fn run(source: &str) -> anyhow::Result<()> {
+fn run(interpreter: &mut Interpreter, source: &str) -> anyhow::Result<()> {
     let mut scanner = Scanner::new(source);
 
     let tokens = scanner.scan();
     let mut parser = Parser::new(tokens);
 
     if let Ok(statements) = parser.parse() {
-        Interpreter::new().interpret(statements);
+        interpreter.interpret(statements);
     }
 
     Ok(())
 }
 
 fn run_prompt() -> anyhow::Result<()> {
+    let mut interpreter = Interpreter::new();
+
     loop {
         print!("> ");
         std::io::stdout().flush()?;
@@ -25,7 +27,7 @@ fn run_prompt() -> anyhow::Result<()> {
             break;
         }
 
-        run(&line)?;
+        run(&mut interpreter, &line)?;
     }
 
     Ok(())

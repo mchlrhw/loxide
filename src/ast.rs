@@ -6,10 +6,15 @@ pub enum Expr {
     Grouping(Box<Expr>),
     Unary(Token, Box<Expr>),
     Binary(Box<Expr>, Token, Box<Expr>),
+    Variable(Token),
 }
 
 #[derive(Debug)]
 pub enum Stmt {
     Expression(Expr),
     Print(Expr),
+    Var {
+        name: String,
+        initializer: Option<Expr>,
+    },
 }
