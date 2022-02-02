@@ -229,6 +229,17 @@ impl Interpreter {
                     self.environment = *environment;
                 }
             }
+            Stmt::If {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
+                if is_truthy(self.evaluate(condition)?) {
+                    self.execute(*then_branch)?;
+                } else if let Some(else_branch) = else_branch {
+                    self.execute(*else_branch)?;
+                }
+            }
         }
 
         Ok(())

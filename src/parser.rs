@@ -222,6 +222,24 @@ impl Parser {
         self.assignment()
     }
 
+    fn if_statement(&mut self) -> Result<Stmt, Error> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'if'.")?;
+        let condition = self.expression()?;
+        self.consume(TokenType::RightParen, "Expect ')' after if condition.")?;
+
+        let then_branch = Box::new(self.statement()?);
+        let mut else_branch = None;
+        if self.is_match(&[TokenType::Else]) {
+            else_branch = Some(Box::new(self.statement()?));
+        }
+
+        Ok(Stmt::If {
+            condition,
+            then_branch,
+            else_branch,
+        })
+    }
+
     fn print_statement(&mut self) -> Result<Stmt, Error> {
         let value = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after value.")?;
@@ -238,7 +256,7 @@ impl Parser {
             }
         }
 
-        self.consume(TokenType::RightBrace, "Expect '}' after block.");
+        self.consume(TokenType::RightBrace, "Expect '}' after block.")?;
 
         Ok(statements)
     }
@@ -251,7 +269,9 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Result<Stmt, Error> {
-        let stmt = if self.is_match(&[TokenType::Print]) {
+        let stmt = if self.is_match(&[TokenType::If]) {
+            self.if_statement()?
+        } else if self.is_match(&[TokenType::Print]) {
             self.print_statement()?
         } else if self.is_match(&[TokenType::LeftBrace]) {
             match self.block() {
