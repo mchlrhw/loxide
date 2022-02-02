@@ -10,13 +10,16 @@ pub enum Error {
     Runtime { message: String, line: usize },
 }
 
+#[derive(Clone, Default)]
 struct Environment {
+    enclosing: Option<Box<Environment>>,
     values: HashMap<String, Literal>,
 }
 
 impl Environment {
-    fn new() -> Self {
+    fn new(enclosing: Environment) -> Self {
         Self {
+            enclosing: Some(Box::new(enclosing)),
             values: HashMap::new(),
         }
     }
@@ -28,25 +31,37 @@ impl Environment {
     fn assign(&mut self, name: &Token, value: &Literal) -> Result<(), Error> {
         let lexeme = name.lexeme();
 
-        if !self.values.contains_key(lexeme) {
-            return Err(Error::Runtime {
-                message: format!("Undefined variable '{lexeme}'."),
-                line: name.line(),
-            });
+        if self.values.contains_key(lexeme) {
+            self.values.insert(lexeme.to_string(), value.clone());
+
+            return Ok(());
         }
 
-        self.values.insert(lexeme.to_string(), value.clone());
-
-        Ok(())
+        if let Some(ref mut enclosing) = &mut self.enclosing {
+            enclosing.assign(name, value)
+        } else {
+            Err(Error::Runtime {
+                message: format!("Undefined variable '{lexeme}'."),
+                line: name.line(),
+            })
+        }
     }
 
     fn get(&self, name: &Token) -> Result<Literal, Error> {
         let lexeme = name.lexeme();
 
-        self.values.get(lexeme).cloned().ok_or(Error::Runtime {
-            message: format!("Undefined variable '{lexeme}'."),
-            line: name.line(),
-        })
+        if self.values.contains_key(lexeme) {
+            return Ok(self.values.get(lexeme).unwrap().clone());
+        }
+
+        if let Some(enclosing) = &self.enclosing {
+            enclosing.get(name)
+        } else {
+            Err(Error::Runtime {
+                message: format!("Undefined variable '{lexeme}'."),
+                line: name.line(),
+            })
+        }
     }
 }
 
@@ -90,7 +105,7 @@ pub struct Interpreter {
 
 impl Interpreter {
     pub fn new() -> Self {
-        let environment = Environment::new();
+        let environment = Environment::default();
 
         Self { environment }
     }
@@ -202,6 +217,17 @@ impl Interpreter {
                 };
 
                 self.environment.define(&name, &value);
+            }
+            Stmt::Block(statements) => {
+                self.environment = Environment::new(self.environment.clone());
+
+                for stmt in statements {
+                    self.execute(*stmt)?;
+                }
+
+                if let Some(environment) = self.environment.enclosing.clone() {
+                    self.environment = *environment;
+                }
             }
         }
 

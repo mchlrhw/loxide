@@ -229,6 +229,20 @@ impl Parser {
         Ok(Stmt::Print(value))
     }
 
+    fn block(&mut self) -> Result<Vec<Box<Stmt>>, Error> {
+        let mut statements = vec![];
+
+        while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+            if let Some(stmt) = self.declaration() {
+                statements.push(Box::new(stmt));
+            }
+        }
+
+        self.consume(TokenType::RightBrace, "Expect '}' after block.");
+
+        Ok(statements)
+    }
+
     fn expression_statement(&mut self) -> Result<Stmt, Error> {
         let expr = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ';' after expression.")?;
@@ -239,6 +253,11 @@ impl Parser {
     fn statement(&mut self) -> Result<Stmt, Error> {
         let stmt = if self.is_match(&[TokenType::Print]) {
             self.print_statement()?
+        } else if self.is_match(&[TokenType::LeftBrace]) {
+            match self.block() {
+                Ok(statements) => Stmt::Block(statements),
+                Err(error) => return Err(error),
+            }
         } else {
             self.expression_statement()?
         };

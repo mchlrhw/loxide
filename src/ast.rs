@@ -18,4 +18,5 @@ pub enum Stmt {
         name: String,
         initializer: Option<Expr>,
     },
+    Block(Vec<Box<Stmt>>),
 }
