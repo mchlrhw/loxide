@@ -25,6 +25,21 @@ impl Environment {
         self.values.insert(name.to_string(), value.clone());
     }
 
+    fn assign(&mut self, name: &Token, value: &Literal) -> Result<(), Error> {
+        let lexeme = name.lexeme();
+
+        if !self.values.contains_key(lexeme) {
+            return Err(Error::Runtime {
+                message: format!("Undefined variable '{lexeme}'."),
+                line: name.line(),
+            });
+        }
+
+        self.values.insert(lexeme.to_string(), value.clone());
+
+        Ok(())
+    }
+
     fn get(&self, name: &Token) -> Result<Literal, Error> {
         let lexeme = name.lexeme();
 
@@ -80,7 +95,7 @@ impl Interpreter {
         Self { environment }
     }
 
-    fn evaluate(&self, expr: Expr) -> Result<Literal, Error> {
+    fn evaluate(&mut self, expr: Expr) -> Result<Literal, Error> {
         match expr {
             Expr::Literal(literal) => Ok(literal),
             Expr::Grouping(group) => self.evaluate(*group),
@@ -161,6 +176,12 @@ impl Interpreter {
                 }
             }
             Expr::Variable(name) => self.environment.get(&name),
+            Expr::Assign { name, value } => {
+                let value = self.evaluate(*value)?;
+                self.environment.assign(&name, &value)?;
+
+                Ok(value)
+            }
         }
     }
 
