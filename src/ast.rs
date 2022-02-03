@@ -1,6 +1,6 @@
 use crate::token::{Literal, Token};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Expr {
     Literal(Literal),
     Grouping(Box<Expr>),
@@ -18,13 +18,17 @@ pub enum Expr {
     },
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Stmt {
     Expression(Expr),
     If {
         condition: Expr,
         then_branch: Box<Stmt>,
         else_branch: Option<Box<Stmt>>,
+    },
+    While {
+        condition: Expr,
+        body: Box<Stmt>,
     },
     Print(Expr),
     Var {

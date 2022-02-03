@@ -259,6 +259,11 @@ impl Interpreter {
                     self.execute(*else_branch)?;
                 }
             }
+            Stmt::While { condition, body } => {
+                while is_truthy(&self.evaluate(condition.clone())?) {
+                    self.execute(*body.clone())?;
+                }
+            }
         }
 
         Ok(())
@@ -268,6 +273,7 @@ impl Interpreter {
         for statement in statements {
             if let Err(error) = self.execute(statement) {
                 println!("{error}");
+                return;
             }
         }
     }

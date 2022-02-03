@@ -13,6 +13,7 @@ pub enum Error {
 pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
+    errors: Vec<Error>,
 }
 
 impl Parser {
@@ -20,6 +21,7 @@ impl Parser {
         Self {
             tokens: tokens.to_owned(),
             current: 0,
+            errors: vec![],
         }
     }
 
@@ -279,6 +281,15 @@ impl Parser {
         Ok(Stmt::Print(value))
     }
 
+    fn while_statement(&mut self) -> Result<Stmt, Error> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'while'.")?;
+        let condition = self.expression()?;
+        self.consume(TokenType::RightParen, "Expect ')' after condition.")?;
+        let body = Box::new(self.statement()?);
+
+        Ok(Stmt::While { condition, body })
+    }
+
     fn block(&mut self) -> Result<Vec<Box<Stmt>>, Error> {
         let mut statements = vec![];
 
@@ -305,6 +316,8 @@ impl Parser {
             self.if_statement()?
         } else if self.is_match(&[TokenType::Print]) {
             self.print_statement()?
+        } else if self.is_match(&[TokenType::While]) {
+            self.while_statement()?
         } else if self.is_match(&[TokenType::LeftBrace]) {
             match self.block() {
                 Ok(statements) => Stmt::Block(statements),
@@ -344,7 +357,8 @@ impl Parser {
         };
 
         match res {
-            Err(_) => {
+            Err(error) => {
+                self.errors.push(error);
                 self.synchronize();
 
                 None
@@ -361,6 +375,10 @@ impl Parser {
             }
         }
 
-        Ok(statements)
+        if self.errors.is_empty() {
+            Ok(statements)
+        } else {
+            Err(self.errors[0].clone())
+        }
     }
 }
