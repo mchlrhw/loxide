@@ -2,38 +2,38 @@ use crate::token::{Literal, Token};
 
 #[derive(Clone, Debug)]
 pub enum Expr {
-    Literal(Literal),
+    Assign {
+        name: Token,
+        value: Box<Expr>,
+    },
+    Binary(Box<Expr>, Token, Box<Expr>),
     Grouping(Box<Expr>),
+    Literal(Literal),
     Logical {
         left: Box<Expr>,
         operator: Token,
         right: Box<Expr>,
     },
     Unary(Token, Box<Expr>),
-    Binary(Box<Expr>, Token, Box<Expr>),
     Variable(Token),
-    Assign {
-        name: Token,
-        value: Box<Expr>,
-    },
 }
 
 #[derive(Clone, Debug)]
 pub enum Stmt {
+    Block(Vec<Stmt>),
     Expression(Expr),
     If {
         condition: Expr,
         then_branch: Box<Stmt>,
         else_branch: Option<Box<Stmt>>,
     },
-    While {
-        condition: Expr,
-        body: Box<Stmt>,
-    },
     Print(Expr),
     Var {
         name: String,
         initializer: Option<Expr>,
     },
-    Block(Vec<Stmt>),
+    While {
+        condition: Expr,
+        body: Box<Stmt>,
+    },
 }
