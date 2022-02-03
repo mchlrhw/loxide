@@ -256,6 +256,53 @@ impl Parser {
         self.assignment()
     }
 
+    fn for_statement(&mut self) -> Result<Stmt, Error> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'for'.")?;
+
+        let initializer = if self.is_match(&[TokenType::Semicolon]) {
+            None
+        } else if self.is_match(&[TokenType::Var]) {
+            Some(self.var_declaration()?)
+        } else {
+            Some(self.expression_statement()?)
+        };
+
+        let mut condition = None;
+        if !self.check(TokenType::Semicolon) {
+            condition = Some(self.expression()?);
+        }
+
+        self.consume(TokenType::Semicolon, "Expect ';' after loop condition.")?;
+
+        let mut increment = None;
+        if !self.check(TokenType::RightParen) {
+            increment = Some(self.expression()?);
+        }
+
+        self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
+
+        let mut body = self.statement()?;
+        if let Some(increment) = increment {
+            body = Stmt::Block(vec![Box::new(body), Box::new(Stmt::Expression(increment))]);
+        }
+
+        let condition = match condition {
+            None => Expr::Literal(Literal::Boolean(true)),
+            Some(expr) => expr,
+        };
+
+        body = Stmt::While {
+            condition,
+            body: Box::new(body),
+        };
+
+        if let Some(initializer) = initializer {
+            body = Stmt::Block(vec![Box::new(initializer), Box::new(body)]);
+        }
+
+        Ok(body)
+    }
+
     fn if_statement(&mut self) -> Result<Stmt, Error> {
         self.consume(TokenType::LeftParen, "Expect '(' after 'if'.")?;
         let condition = self.expression()?;
@@ -312,7 +359,9 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Result<Stmt, Error> {
-        let stmt = if self.is_match(&[TokenType::If]) {
+        let stmt = if self.is_match(&[TokenType::For]) {
+            self.for_statement()?
+        } else if self.is_match(&[TokenType::If]) {
             self.if_statement()?
         } else if self.is_match(&[TokenType::Print]) {
             self.print_statement()?
