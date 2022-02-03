@@ -1,4 +1,4 @@
-use crate::token::{Literal, Token};
+use crate::token::{Token, Value};
 
 #[derive(Clone, Debug)]
 pub enum Expr {
@@ -8,7 +8,7 @@ pub enum Expr {
     },
     Binary(Box<Expr>, Token, Box<Expr>),
     Grouping(Box<Expr>),
-    Literal(Literal),
+    Literal(Value),
     Logical {
         left: Box<Expr>,
         operator: Token,

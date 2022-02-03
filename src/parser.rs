@@ -1,4 +1,4 @@
-use crate::token::{Literal, Token, TokenType};
+use crate::token::{Token, TokenType, Value};
 use crate::{
     ast::{Expr, Stmt},
     report,
@@ -109,15 +109,15 @@ impl Parser {
 
     fn primary(&mut self) -> Result<Expr, Error> {
         if self.is_match(&[TokenType::False]) {
-            Ok(Expr::Literal(Literal::Boolean(false)))
+            Ok(Expr::Literal(Value::Boolean(false)))
         } else if self.is_match(&[TokenType::True]) {
-            Ok(Expr::Literal(Literal::Boolean(true)))
+            Ok(Expr::Literal(Value::Boolean(true)))
         } else if self.is_match(&[TokenType::Nil]) {
-            Ok(Expr::Literal(Literal::Nil))
+            Ok(Expr::Literal(Value::Nil))
         } else if self.is_match(&[TokenType::Number, TokenType::String]) {
             Ok(Expr::Literal(
                 self.previous()
-                    .literal()
+                    .value()
                     .clone()
                     .expect("must have a literal"),
             ))
@@ -287,7 +287,7 @@ impl Parser {
         }
 
         let condition = match condition {
-            None => Expr::Literal(Literal::Boolean(true)),
+            None => Expr::Literal(Value::Boolean(true)),
             Some(expr) => expr,
         };
 

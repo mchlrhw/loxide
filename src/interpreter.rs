@@ -1,6 +1,6 @@
 use crate::{
     ast::{Expr, Stmt},
-    token::{Literal, Token, TokenType},
+    token::{Token, TokenType, Value},
 };
 use std::collections::HashMap;
 
@@ -13,7 +13,7 @@ pub enum Error {
 #[derive(Clone, Default)]
 struct Environment {
     enclosing: Option<Box<Environment>>,
-    values: HashMap<String, Literal>,
+    values: HashMap<String, Value>,
 }
 
 impl Environment {
@@ -24,11 +24,11 @@ impl Environment {
         }
     }
 
-    fn define(&mut self, name: &str, value: &Literal) {
+    fn define(&mut self, name: &str, value: &Value) {
         self.values.insert(name.to_string(), value.clone());
     }
 
-    fn assign(&mut self, name: &Token, value: &Literal) -> Result<(), Error> {
+    fn assign(&mut self, name: &Token, value: &Value) -> Result<(), Error> {
         let lexeme = name.lexeme();
 
         if self.values.contains_key(lexeme) {
@@ -47,7 +47,7 @@ impl Environment {
         }
     }
 
-    fn get(&self, name: &Token) -> Result<Literal, Error> {
+    fn get(&self, name: &Token) -> Result<Value, Error> {
         let lexeme = name.lexeme();
 
         if self.values.contains_key(lexeme) {
@@ -65,17 +65,17 @@ impl Environment {
     }
 }
 
-fn is_truthy(literal: &Literal) -> bool {
-    match literal {
-        Literal::Nil => false,
-        Literal::Boolean(value) => *value,
+fn is_truthy(value: &Value) -> bool {
+    match value {
+        Value::Nil => false,
+        Value::Boolean(b) => *b,
         _ => true,
     }
 }
 
-fn check_number_operand(operator: Token, operand: Literal) -> Result<f64, Error> {
-    if let Literal::Number(value) = operand {
-        Ok(value)
+fn check_number_operand(operator: Token, operand: Value) -> Result<f64, Error> {
+    if let Value::Number(n) = operand {
+        Ok(n)
     } else {
         Err(Error::Runtime {
             message: "Operand must be a number.".to_string(),
@@ -84,13 +84,9 @@ fn check_number_operand(operator: Token, operand: Literal) -> Result<f64, Error>
     }
 }
 
-fn check_number_operands(
-    operator: Token,
-    left: Literal,
-    right: Literal,
-) -> Result<(f64, f64), Error> {
-    if let (Literal::Number(left_val), Literal::Number(right_val)) = (left, right) {
-        Ok((left_val, right_val))
+fn check_number_operands(operator: Token, left: Value, right: Value) -> Result<(f64, f64), Error> {
+    if let (Value::Number(left_n), Value::Number(right_n)) = (left, right) {
+        Ok((left_n, right_n))
     } else {
         Err(Error::Runtime {
             message: "Operands must be a numbers.".to_string(),
@@ -109,20 +105,20 @@ impl Interpreter {
         Self::default()
     }
 
-    fn evaluate(&mut self, expr: Expr) -> Result<Literal, Error> {
+    fn evaluate(&mut self, expr: Expr) -> Result<Value, Error> {
         match expr {
-            Expr::Literal(literal) => Ok(literal),
+            Expr::Literal(value) => Ok(value),
             Expr::Grouping(group) => self.evaluate(*group),
             Expr::Unary(op, right) => {
-                let literal = self.evaluate(*right)?;
+                let value = self.evaluate(*right)?;
 
                 match op.typ() {
                     TokenType::Minus => {
-                        let value = check_number_operand(op, literal)?;
+                        let n = check_number_operand(op, value)?;
 
-                        Ok(Literal::Number(-value))
+                        Ok(Value::Number(-n))
                     }
-                    TokenType::Bang => Ok(Literal::Boolean(!is_truthy(&literal))),
+                    TokenType::Bang => Ok(Value::Boolean(!is_truthy(&value))),
                     typ => panic!("{typ:?} is not a valid unary operator"),
                 }
             }
@@ -134,39 +130,37 @@ impl Interpreter {
                     TokenType::Greater => {
                         let (left, right) = check_number_operands(op, left, right)?;
 
-                        Ok(Literal::Boolean(left > right))
+                        Ok(Value::Boolean(left > right))
                     }
                     TokenType::GreaterEqual => {
                         let (left, right) = check_number_operands(op, left, right)?;
 
-                        Ok(Literal::Boolean(left >= right))
+                        Ok(Value::Boolean(left >= right))
                     }
                     TokenType::Less => {
                         let (left, right) = check_number_operands(op, left, right)?;
 
-                        Ok(Literal::Boolean(left < right))
+                        Ok(Value::Boolean(left < right))
                     }
                     TokenType::LessEqual => {
                         let (left, right) = check_number_operands(op, left, right)?;
 
-                        Ok(Literal::Boolean(left <= right))
+                        Ok(Value::Boolean(left <= right))
                     }
-                    TokenType::EqualEqual => Ok(Literal::Boolean(left == right)),
-                    TokenType::BangEqual => Ok(Literal::Boolean(left != right)),
+                    TokenType::EqualEqual => Ok(Value::Boolean(left == right)),
+                    TokenType::BangEqual => Ok(Value::Boolean(left != right)),
                     TokenType::Minus => {
                         let (left, right) = check_number_operands(op, left, right)?;
 
-                        Ok(Literal::Number(left - right))
+                        Ok(Value::Number(left - right))
                     }
                     TokenType::Plus => {
-                        if let (Literal::Number(left), Literal::Number(right)) =
+                        if let (Value::Number(left), Value::Number(right)) =
                             (left.clone(), right.clone())
                         {
-                            Ok(Literal::Number(left + right))
-                        } else if let (Literal::String(left), Literal::String(right)) =
-                            (left, right)
-                        {
-                            Ok(Literal::String(format!("{left}{right}")))
+                            Ok(Value::Number(left + right))
+                        } else if let (Value::String(left), Value::String(right)) = (left, right) {
+                            Ok(Value::String(format!("{left}{right}")))
                         } else {
                             Err(Error::Runtime {
                                 message: "Operands must be two numbers or two strings.".to_string(),
@@ -177,12 +171,12 @@ impl Interpreter {
                     TokenType::Slash => {
                         let (left, right) = check_number_operands(op, left, right)?;
 
-                        Ok(Literal::Number(left / right))
+                        Ok(Value::Number(left / right))
                     }
                     TokenType::Star => {
                         let (left, right) = check_number_operands(op, left, right)?;
 
-                        Ok(Literal::Number(left * right))
+                        Ok(Value::Number(left * right))
                     }
                     typ => panic!("{typ:?} is not a valid binary operator."),
                 }
@@ -227,7 +221,7 @@ impl Interpreter {
                 let value = if let Some(initializer) = initializer {
                     self.evaluate(initializer)?
                 } else {
-                    Literal::Nil
+                    Value::Nil
                 };
 
                 self.environment.define(&name, &value);

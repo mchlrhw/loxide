@@ -1,4 +1,4 @@
-use crate::token::{Literal, Token, TokenType};
+use crate::token::{Token, TokenType, Value};
 use itertools::{Itertools, MultiPeek};
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, str::Chars};
@@ -74,9 +74,9 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn add_token(&mut self, typ: TokenType, literal: Option<Literal>) {
+    fn add_token(&mut self, typ: TokenType, value: Option<Value>) {
         let lexeme = &self.source[self.start..self.current];
-        let token = Token::new(typ, lexeme, literal, self.line);
+        let token = Token::new(typ, lexeme, value, self.line);
         self.tokens.push(token);
     }
 
@@ -98,8 +98,8 @@ impl<'a> Scanner<'a> {
         self.advance(); // The closing ".
 
         // Trim the surrounding quotes.
-        let value = &self.source[self.start + 1..self.current - 1];
-        self.add_token(TokenType::String, Some(Literal::String(value.to_string())));
+        let s = self.source[self.start + 1..self.current - 1].to_string();
+        self.add_token(TokenType::String, Some(Value::String(s)));
     }
 
     fn number(&mut self) {
@@ -130,7 +130,7 @@ impl<'a> Scanner<'a> {
         let lexeme = &self.source[self.start..self.current];
         let value = lexeme.parse().expect("must have a valid double");
 
-        self.add_token(TokenType::Number, Some(Literal::Number(value)));
+        self.add_token(TokenType::Number, Some(Value::Number(value)));
     }
 
     fn identifier(&mut self) {

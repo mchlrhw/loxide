@@ -1,14 +1,14 @@
 use std::fmt;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Literal {
-    String(String),
-    Number(f64),
+pub enum Value {
     Boolean(bool),
     Nil,
+    Number(f64),
+    String(String),
 }
 
-impl fmt::Display for Literal {
+impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::String(s) => write!(f, "{s}"),
@@ -74,16 +74,16 @@ pub enum TokenType {
 pub struct Token {
     typ: TokenType,
     lexeme: String,
-    literal: Option<Literal>,
+    value: Option<Value>,
     line: usize,
 }
 
 impl Token {
-    pub fn new(typ: TokenType, lexeme: &str, literal: Option<Literal>, line: usize) -> Self {
+    pub fn new(typ: TokenType, lexeme: &str, value: Option<Value>, line: usize) -> Self {
         Self {
             typ,
             lexeme: lexeme.to_string(),
-            literal,
+            value,
             line,
         }
     }
@@ -96,8 +96,8 @@ impl Token {
         &self.lexeme
     }
 
-    pub fn literal(&self) -> &Option<Literal> {
-        &self.literal
+    pub fn value(&self) -> &Option<Value> {
+        &self.value
     }
 
     pub fn line(&self) -> usize {
