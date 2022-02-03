@@ -65,10 +65,10 @@ impl Environment {
     }
 }
 
-fn is_truthy(literal: Literal) -> bool {
+fn is_truthy(literal: &Literal) -> bool {
     match literal {
         Literal::Nil => false,
-        Literal::Boolean(value) => value,
+        Literal::Boolean(value) => *value,
         _ => true,
     }
 }
@@ -123,7 +123,7 @@ impl Interpreter {
 
                         Ok(Literal::Number(-value))
                     }
-                    TokenType::Bang => Ok(Literal::Boolean(!is_truthy(literal))),
+                    TokenType::Bang => Ok(Literal::Boolean(!is_truthy(&literal))),
                     typ => panic!("{typ:?} is not a valid unary operator"),
                 }
             }
@@ -197,6 +197,25 @@ impl Interpreter {
 
                 Ok(value)
             }
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => {
+                let left = self.evaluate(*left)?;
+
+                if matches!(operator.typ(), TokenType::Or) {
+                    if is_truthy(&left) {
+                        return Ok(left);
+                    }
+                } else {
+                    if !is_truthy(&left) {
+                        return Ok(left);
+                    }
+                }
+
+                self.evaluate(*right)
+            }
         }
     }
 
@@ -234,7 +253,7 @@ impl Interpreter {
                 then_branch,
                 else_branch,
             } => {
-                if is_truthy(self.evaluate(condition)?) {
+                if is_truthy(&self.evaluate(condition)?) {
                     self.execute(*then_branch)?;
                 } else if let Some(else_branch) = else_branch {
                     self.execute(*else_branch)?;

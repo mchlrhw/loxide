@@ -4,10 +4,18 @@ use crate::token::{Literal, Token};
 pub enum Expr {
     Literal(Literal),
     Grouping(Box<Expr>),
+    Logical {
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
+    },
     Unary(Token, Box<Expr>),
     Binary(Box<Expr>, Token, Box<Expr>),
     Variable(Token),
-    Assign { name: Token, value: Box<Expr> },
+    Assign {
+        name: Token,
+        value: Box<Expr>,
+    },
 }
 
 #[derive(Debug)]
