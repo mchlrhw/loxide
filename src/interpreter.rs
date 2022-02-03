@@ -78,7 +78,7 @@ fn check_number_operand(operator: Token, operand: Literal) -> Result<f64, Error>
         Ok(value)
     } else {
         Err(Error::Runtime {
-            message: format!("Operand must be a number."),
+            message: "Operand must be a number.".to_string(),
             line: operator.line(),
         })
     }
@@ -93,21 +93,20 @@ fn check_number_operands(
         Ok((left_val, right_val))
     } else {
         Err(Error::Runtime {
-            message: format!("Operands must be a numbers."),
+            message: "Operands must be a numbers.".to_string(),
             line: operator.line(),
         })
     }
 }
 
+#[derive(Default)]
 pub struct Interpreter {
     environment: Environment,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        let environment = Environment::default();
-
-        Self { environment }
+        Self::default()
     }
 
     fn evaluate(&mut self, expr: Expr) -> Result<Literal, Error> {
@@ -164,17 +163,15 @@ impl Interpreter {
                             (left.clone(), right.clone())
                         {
                             Ok(Literal::Number(left + right))
+                        } else if let (Literal::String(left), Literal::String(right)) =
+                            (left, right)
+                        {
+                            Ok(Literal::String(format!("{left}{right}")))
                         } else {
-                            if let (Literal::String(left), Literal::String(right)) = (left, right) {
-                                Ok(Literal::String(format!("{left}{right}")))
-                            } else {
-                                Err(Error::Runtime {
-                                    message: format!(
-                                        "Operands must be two numbers or two strings."
-                                    ),
-                                    line: op.line(),
-                                })
-                            }
+                            Err(Error::Runtime {
+                                message: "Operands must be two numbers or two strings.".to_string(),
+                                line: op.line(),
+                            })
                         }
                     }
                     TokenType::Slash => {
@@ -208,10 +205,8 @@ impl Interpreter {
                     if is_truthy(&left) {
                         return Ok(left);
                     }
-                } else {
-                    if !is_truthy(&left) {
-                        return Ok(left);
-                    }
+                } else if !is_truthy(&left) {
+                    return Ok(left);
                 }
 
                 self.evaluate(*right)
@@ -241,7 +236,7 @@ impl Interpreter {
                 self.environment = Environment::new(self.environment.clone());
 
                 for stmt in statements {
-                    self.execute(*stmt)?;
+                    self.execute(stmt)?;
                 }
 
                 if let Some(environment) = self.environment.enclosing.clone() {

@@ -1,7 +1,7 @@
 use lox::{interpreter::Interpreter, parser::Parser, scanner::Scanner};
 use std::{env, io::Write, process};
 
-fn run(interpreter: &mut Interpreter, source: &str) -> anyhow::Result<()> {
+fn run(interpreter: &mut Interpreter, source: &str) {
     let mut scanner = Scanner::new(source);
 
     let tokens = scanner.scan();
@@ -10,8 +10,6 @@ fn run(interpreter: &mut Interpreter, source: &str) -> anyhow::Result<()> {
     if let Ok(statements) = parser.parse() {
         interpreter.interpret(statements);
     }
-
-    Ok(())
 }
 
 fn run_prompt() -> anyhow::Result<()> {
@@ -27,7 +25,7 @@ fn run_prompt() -> anyhow::Result<()> {
             break;
         }
 
-        run(&mut interpreter, &line)?;
+        run(&mut interpreter, &line);
     }
 
     Ok(())
@@ -37,7 +35,9 @@ fn run_file(path: &str) -> anyhow::Result<()> {
     let source = std::fs::read_to_string(path)?;
     let mut interpreter = Interpreter::new();
 
-    run(&mut interpreter, &source)
+    run(&mut interpreter, &source);
+
+    Ok(())
 }
 
 fn main() -> anyhow::Result<()> {

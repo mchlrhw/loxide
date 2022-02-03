@@ -283,7 +283,7 @@ impl Parser {
 
         let mut body = self.statement()?;
         if let Some(increment) = increment {
-            body = Stmt::Block(vec![Box::new(body), Box::new(Stmt::Expression(increment))]);
+            body = Stmt::Block(vec![body, Stmt::Expression(increment)]);
         }
 
         let condition = match condition {
@@ -297,7 +297,7 @@ impl Parser {
         };
 
         if let Some(initializer) = initializer {
-            body = Stmt::Block(vec![Box::new(initializer), Box::new(body)]);
+            body = Stmt::Block(vec![initializer, body]);
         }
 
         Ok(body)
@@ -337,12 +337,12 @@ impl Parser {
         Ok(Stmt::While { condition, body })
     }
 
-    fn block(&mut self) -> Result<Vec<Box<Stmt>>, Error> {
+    fn block(&mut self) -> Result<Vec<Stmt>, Error> {
         let mut statements = vec![];
 
         while !self.check(TokenType::RightBrace) && !self.is_at_end() {
             if let Some(stmt) = self.declaration() {
-                statements.push(Box::new(stmt));
+                statements.push(stmt);
             }
         }
 
