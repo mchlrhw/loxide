@@ -33,8 +33,11 @@ fn run_prompt() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn run_file(_path: &str) -> anyhow::Result<()> {
-    todo!()
+fn run_file(path: &str) -> anyhow::Result<()> {
+    let source = std::fs::read_to_string(path)?;
+    let mut interpreter = Interpreter::new();
+
+    run(&mut interpreter, &source)
 }
 
 fn main() -> anyhow::Result<()> {
