@@ -109,12 +109,12 @@ impl Interpreter {
         match expr {
             Expr::Literal(value) => Ok(value),
             Expr::Grouping(group) => self.evaluate(*group),
-            Expr::Unary(op, right) => {
+            Expr::Unary { operator, right } => {
                 let value = self.evaluate(*right)?;
 
-                match op.typ() {
+                match operator.typ() {
                     TokenType::Minus => {
-                        let n = check_number_operand(op, value)?;
+                        let n = check_number_operand(operator, value)?;
 
                         Ok(Value::Number(-n))
                     }
@@ -122,35 +122,39 @@ impl Interpreter {
                     typ => panic!("{typ:?} is not a valid unary operator"),
                 }
             }
-            Expr::Binary(left, op, right) => {
+            Expr::Binary {
+                left,
+                operator,
+                right,
+            } => {
                 let left = self.evaluate(*left)?;
                 let right = self.evaluate(*right)?;
 
-                match op.typ() {
+                match operator.typ() {
                     TokenType::Greater => {
-                        let (left, right) = check_number_operands(op, left, right)?;
+                        let (left, right) = check_number_operands(operator, left, right)?;
 
                         Ok(Value::Boolean(left > right))
                     }
                     TokenType::GreaterEqual => {
-                        let (left, right) = check_number_operands(op, left, right)?;
+                        let (left, right) = check_number_operands(operator, left, right)?;
 
                         Ok(Value::Boolean(left >= right))
                     }
                     TokenType::Less => {
-                        let (left, right) = check_number_operands(op, left, right)?;
+                        let (left, right) = check_number_operands(operator, left, right)?;
 
                         Ok(Value::Boolean(left < right))
                     }
                     TokenType::LessEqual => {
-                        let (left, right) = check_number_operands(op, left, right)?;
+                        let (left, right) = check_number_operands(operator, left, right)?;
 
                         Ok(Value::Boolean(left <= right))
                     }
                     TokenType::EqualEqual => Ok(Value::Boolean(left == right)),
                     TokenType::BangEqual => Ok(Value::Boolean(left != right)),
                     TokenType::Minus => {
-                        let (left, right) = check_number_operands(op, left, right)?;
+                        let (left, right) = check_number_operands(operator, left, right)?;
 
                         Ok(Value::Number(left - right))
                     }
@@ -164,17 +168,17 @@ impl Interpreter {
                         } else {
                             Err(Error::Runtime {
                                 message: "Operands must be two numbers or two strings.".to_string(),
-                                line: op.line(),
+                                line: operator.line(),
                             })
                         }
                     }
                     TokenType::Slash => {
-                        let (left, right) = check_number_operands(op, left, right)?;
+                        let (left, right) = check_number_operands(operator, left, right)?;
 
                         Ok(Value::Number(left / right))
                     }
                     TokenType::Star => {
-                        let (left, right) = check_number_operands(op, left, right)?;
+                        let (left, right) = check_number_operands(operator, left, right)?;
 
                         Ok(Value::Number(left * right))
                     }

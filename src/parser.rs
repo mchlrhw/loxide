@@ -136,13 +136,16 @@ impl Parser {
     }
 
     fn unary(&mut self) -> Result<Expr, Error> {
-        if self.is_match(&[TokenType::Bang, TokenType::Minus]) {
+        let expr = if self.is_match(&[TokenType::Bang, TokenType::Minus]) {
             let operator = self.previous();
-            let right = self.unary()?;
-            return Ok(Expr::Unary(operator, Box::new(right)));
-        }
+            let right = Box::new(self.unary()?);
 
-        self.primary()
+            Expr::Unary { operator, right }
+        } else {
+            self.primary()?
+        };
+
+        Ok(expr)
     }
 
     fn factor(&mut self) -> Result<Expr, Error> {
@@ -150,8 +153,13 @@ impl Parser {
 
         while self.is_match(&[TokenType::Slash, TokenType::Star]) {
             let operator = self.previous();
-            let right = self.unary()?;
-            expr = Expr::Binary(Box::new(expr), operator, Box::new(right));
+            let right = Box::new(self.unary()?);
+
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator,
+                right,
+            };
         }
 
         Ok(expr)
@@ -162,8 +170,13 @@ impl Parser {
 
         while self.is_match(&[TokenType::Minus, TokenType::Plus]) {
             let operator = self.previous();
-            let right = self.factor()?;
-            expr = Expr::Binary(Box::new(expr), operator, Box::new(right));
+            let right = Box::new(self.factor()?);
+
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator,
+                right,
+            };
         }
 
         Ok(expr)
@@ -179,8 +192,13 @@ impl Parser {
             TokenType::LessEqual,
         ]) {
             let operator = self.previous();
-            let right = self.term()?;
-            expr = Expr::Binary(Box::new(expr), operator, Box::new(right));
+            let right = Box::new(self.term()?);
+
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator,
+                right,
+            };
         }
 
         Ok(expr)
@@ -191,8 +209,13 @@ impl Parser {
 
         while self.is_match(&[TokenType::BangEqual, TokenType::EqualEqual]) {
             let operator = self.previous();
-            let right = self.comparison()?;
-            expr = Expr::Binary(Box::new(expr), operator, Box::new(right));
+            let right = Box::new(self.comparison()?);
+
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                operator,
+                right,
+            };
         }
 
         Ok(expr)
@@ -204,6 +227,7 @@ impl Parser {
         while self.is_match(&[TokenType::And]) {
             let operator = self.previous();
             let right = Box::new(self.equality()?);
+
             expr = Expr::Logical {
                 left: Box::new(expr),
                 operator,
@@ -220,6 +244,7 @@ impl Parser {
         while self.is_match(&[TokenType::Or]) {
             let operator = self.previous();
             let right = Box::new(self.and()?);
+
             expr = Expr::Logical {
                 left: Box::new(expr),
                 operator,

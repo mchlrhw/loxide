@@ -6,7 +6,11 @@ pub enum Expr {
         name: Token,
         value: Box<Expr>,
     },
-    Binary(Box<Expr>, Token, Box<Expr>),
+    Binary {
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
+    },
     Grouping(Box<Expr>),
     Literal(Value),
     Logical {
@@ -14,7 +18,10 @@ pub enum Expr {
         operator: Token,
         right: Box<Expr>,
     },
-    Unary(Token, Box<Expr>),
+    Unary {
+        operator: Token,
+        right: Box<Expr>,
+    },
     Variable(Token),
 }
 
