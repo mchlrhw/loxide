@@ -1,6 +1,8 @@
 use crate::{
     ast::{Expr, Stmt},
-    token::{Token, TokenType, Value},
+    clock::Clock,
+    token::{Token, TokenType},
+    value::Value,
 };
 use std::collections::HashMap;
 
@@ -95,9 +97,17 @@ fn check_number_operands(operator: Token, left: Value, right: Value) -> Result<(
     }
 }
 
-#[derive(Default)]
 pub struct Interpreter {
     environment: Environment,
+}
+
+impl Default for Interpreter {
+    fn default() -> Self {
+        let mut environment = Environment::default();
+        environment.define("clock", &Clock::value());
+
+        Self { environment }
+    }
 }
 
 impl Interpreter {
@@ -208,6 +218,36 @@ impl Interpreter {
                 }
 
                 self.evaluate(*right)
+            }
+            Expr::Call {
+                callee,
+                paren,
+                arguments,
+            } => {
+                let callee = self.evaluate(*callee)?;
+
+                let mut evaluated_args = vec![];
+                for expr in arguments {
+                    evaluated_args.push(self.evaluate(expr)?);
+                }
+
+                if let Value::Callable(function) = callee {
+                    let arity = function.arity();
+                    let arg_cnt = evaluated_args.len();
+                    if arg_cnt != arity {
+                        Err(Error::Runtime {
+                            message: format!("Expected {arity} arguments but got {arg_cnt}."),
+                            line: paren.line(),
+                        })
+                    } else {
+                        function.call(self, evaluated_args)
+                    }
+                } else {
+                    Err(Error::Runtime {
+                        message: "Can only call functions and classes.".to_string(),
+                        line: paren.line(),
+                    })
+                }
             }
         }
     }

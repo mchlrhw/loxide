@@ -1,4 +1,7 @@
-use crate::token::{Token, TokenType, Value};
+use crate::{
+    token::{Token, TokenType},
+    value::Value,
+};
 use itertools::{Itertools, MultiPeek};
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, str::Chars};

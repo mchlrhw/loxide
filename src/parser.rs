@@ -1,7 +1,8 @@
-use crate::token::{Token, TokenType, Value};
 use crate::{
     ast::{Expr, Stmt},
     report,
+    token::{Token, TokenType},
+    value::Value,
 };
 
 #[derive(Clone, Debug, thiserror::Error)]
@@ -135,6 +136,45 @@ impl Parser {
         }
     }
 
+    fn finish_call(&mut self, callee: Expr) -> Result<Expr, Error> {
+        let mut arguments = vec![];
+        if !self.check(TokenType::RightParen) {
+            loop {
+                if arguments.len() >= 255 {
+                    self.error(self.peek(), "Can't have more than 255 arguments.");
+                }
+
+                arguments.push(self.expression()?);
+
+                if !self.is_match(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        let paren = self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
+
+        Ok(Expr::Call {
+            callee: Box::new(callee),
+            paren,
+            arguments,
+        })
+    }
+
+    fn call(&mut self) -> Result<Expr, Error> {
+        let mut expr = self.primary()?;
+
+        loop {
+            if self.is_match(&[TokenType::LeftParen]) {
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
+
+        Ok(expr)
+    }
+
     fn unary(&mut self) -> Result<Expr, Error> {
         let expr = if self.is_match(&[TokenType::Bang, TokenType::Minus]) {
             let operator = self.previous();
@@ -142,7 +182,7 @@ impl Parser {
 
             Expr::Unary { operator, right }
         } else {
-            self.primary()?
+            self.call()?
         };
 
         Ok(expr)

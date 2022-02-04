@@ -1,23 +1,4 @@
-use std::fmt;
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Value {
-    Boolean(bool),
-    Nil,
-    Number(f64),
-    String(String),
-}
-
-impl fmt::Display for Value {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::String(s) => write!(f, "{s}"),
-            Self::Number(n) => write!(f, "{n}"),
-            Self::Boolean(b) => write!(f, "{b}"),
-            Self::Nil => write!(f, "nil"),
-        }
-    }
-}
+use crate::value::Value;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum TokenType {
