@@ -38,10 +38,11 @@ impl Callable for LoxFunction {
     }
 
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Result<Value, Error> {
-        // FIXME: This should be interpreter.globals() instead.
-        let mut environment = Environment::new(interpreter.environment().to_owned());
+        let environment = Environment::wrap(interpreter.globals());
         for (idx, param) in self.params.iter().enumerate() {
-            environment.define(param.lexeme(), &arguments[idx]);
+            environment
+                .borrow_mut()
+                .define(param.lexeme(), &arguments[idx]);
         }
 
         interpreter.execute_block(self.body.clone(), environment)?;

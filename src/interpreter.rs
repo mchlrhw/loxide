@@ -5,7 +5,7 @@ use crate::{
     token::{Token, TokenType},
     value::Value,
 };
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -15,16 +15,18 @@ pub enum Error {
 
 #[derive(Clone, Default)]
 pub struct Environment {
-    enclosing: Option<Box<Environment>>,
+    enclosing: Option<Rc<RefCell<Environment>>>,
     values: HashMap<String, Value>,
 }
 
 impl Environment {
-    pub fn new(enclosing: Environment) -> Self {
-        Self {
-            enclosing: Some(Box::new(enclosing)),
+    pub fn wrap(enclosing: Rc<RefCell<Environment>>) -> Rc<RefCell<Self>> {
+        let environment = Self {
+            enclosing: Some(enclosing),
             values: HashMap::new(),
-        }
+        };
+
+        Rc::new(RefCell::new(environment))
     }
 
     pub fn define(&mut self, name: &str, value: &Value) {
@@ -40,8 +42,8 @@ impl Environment {
             return Ok(());
         }
 
-        if let Some(ref mut enclosing) = &mut self.enclosing {
-            enclosing.assign(name, value)
+        if let Some(enclosing) = &self.enclosing {
+            enclosing.borrow_mut().assign(name, value)
         } else {
             Err(Error::Runtime {
                 message: format!("Undefined variable '{lexeme}'."),
@@ -53,12 +55,12 @@ impl Environment {
     fn get(&self, name: &Token) -> Result<Value, Error> {
         let lexeme = name.lexeme();
 
-        if self.values.contains_key(lexeme) {
-            return Ok(self.values.get(lexeme).unwrap().clone());
+        if let Some(value) = self.values.get(lexeme) {
+            return Ok(value.clone());
         }
 
         if let Some(enclosing) = &self.enclosing {
-            enclosing.get(name)
+            enclosing.borrow().get(name)
         } else {
             Err(Error::Runtime {
                 message: format!("Undefined variable '{lexeme}'."),
@@ -98,17 +100,22 @@ fn check_number_operands(operator: Token, left: Value, right: Value) -> Result<(
     }
 }
 
-// TODO: Implement globals.
 pub struct Interpreter {
-    environment: Environment,
+    globals: Rc<RefCell<Environment>>,
+    environment: Rc<RefCell<Environment>>,
 }
 
 impl Default for Interpreter {
     fn default() -> Self {
-        let mut environment = Environment::default();
-        environment.define("clock", &Clock::value());
+        let globals = Rc::new(RefCell::new(Environment::default()));
+        globals.borrow_mut().define("clock", &Clock::value());
 
-        Self { environment }
+        let environment = globals.clone();
+
+        Self {
+            globals,
+            environment,
+        }
     }
 }
 
@@ -117,8 +124,8 @@ impl Interpreter {
         Self::default()
     }
 
-    pub fn environment(&self) -> &Environment {
-        &self.environment
+    pub fn globals(&self) -> Rc<RefCell<Environment>> {
+        self.globals.clone()
     }
 
     fn evaluate(&mut self, expr: Expr) -> Result<Value, Error> {
@@ -201,10 +208,10 @@ impl Interpreter {
                     typ => panic!("{typ:?} is not a valid binary operator."),
                 }
             }
-            Expr::Variable(name) => self.environment.get(&name),
+            Expr::Variable(name) => self.environment.borrow().get(&name),
             Expr::Assign { name, value } => {
                 let value = self.evaluate(*value)?;
-                self.environment.assign(&name, &value)?;
+                self.environment.borrow_mut().assign(&name, &value)?;
 
                 Ok(value)
             }
@@ -261,16 +268,24 @@ impl Interpreter {
     pub fn execute_block(
         &mut self,
         statements: Vec<Stmt>,
-        environment: Environment,
+        environment: Rc<RefCell<Environment>>,
     ) -> Result<(), Error> {
-        self.environment = Environment::new(environment);
+        self.environment = Environment::wrap(environment);
 
         for stmt in statements {
             self.execute(stmt)?;
         }
 
-        if let Some(environment) = self.environment.enclosing.clone() {
-            self.environment = *environment;
+        // This is an attempt to only clone if needed.
+        let enclosing = {
+            if self.environment.borrow().enclosing.is_some() {
+                self.environment.borrow().enclosing.clone()
+            } else {
+                None
+            }
+        };
+        if let Some(enclosing) = enclosing {
+            self.environment = enclosing;
         }
 
         Ok(())
@@ -292,7 +307,7 @@ impl Interpreter {
                     Value::Nil
                 };
 
-                self.environment.define(&name, &value);
+                self.environment.borrow_mut().define(&name, &value);
             }
             Stmt::Block(statements) => {
                 self.execute_block(statements, self.environment.clone())?;
@@ -316,7 +331,7 @@ impl Interpreter {
             Stmt::Function { name, params, body } => {
                 let lexeme = name.lexeme().to_string();
                 let function = LoxFunction::new(name, params, body).value();
-                self.environment.define(&lexeme, &function);
+                self.environment.borrow_mut().define(&lexeme, &function);
             }
         }
 
