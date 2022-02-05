@@ -11,9 +11,12 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 pub enum Error {
     #[error("{message}\n[line {line}]")]
     Runtime { message: String, line: usize },
+
+    #[error("Returning {value:?}")]
+    Return { value: Value },
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct Environment {
     enclosing: Option<Rc<RefCell<Environment>>>,
     values: HashMap<String, Value>,
@@ -265,30 +268,27 @@ impl Interpreter {
         }
     }
 
+    pub fn execute_block_inner(&mut self, statements: Vec<Stmt>) -> Result<(), Error> {
+        for stmt in statements {
+            self.execute(stmt)?;
+        }
+
+        Ok(())
+    }
+
     pub fn execute_block(
         &mut self,
         statements: Vec<Stmt>,
         environment: Rc<RefCell<Environment>>,
     ) -> Result<(), Error> {
-        self.environment = Environment::wrap(environment);
+        let previous = self.environment.clone();
+        self.environment = environment;
 
-        for stmt in statements {
-            self.execute(stmt)?;
-        }
+        let res = self.execute_block_inner(statements);
 
-        // This is an attempt to only clone if needed.
-        let enclosing = {
-            if self.environment.borrow().enclosing.is_some() {
-                self.environment.borrow().enclosing.clone()
-            } else {
-                None
-            }
-        };
-        if let Some(enclosing) = enclosing {
-            self.environment = enclosing;
-        }
+        self.environment = previous;
 
-        Ok(())
+        res
     }
 
     fn execute(&mut self, stmt: Stmt) -> Result<(), Error> {
@@ -310,7 +310,7 @@ impl Interpreter {
                 self.environment.borrow_mut().define(&name, &value);
             }
             Stmt::Block(statements) => {
-                self.execute_block(statements, self.environment.clone())?;
+                self.execute_block(statements, Environment::wrap(self.environment.clone()))?;
             }
             Stmt::If {
                 condition,
@@ -332,6 +332,11 @@ impl Interpreter {
                 let lexeme = name.lexeme().to_string();
                 let function = LoxFunction::new(name, params, body).value();
                 self.environment.borrow_mut().define(&lexeme, &function);
+            }
+            Stmt::Return { value, .. } => {
+                let value = self.evaluate(value)?;
+
+                return Err(Error::Return { value });
             }
         }
 

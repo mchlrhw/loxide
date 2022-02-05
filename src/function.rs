@@ -45,9 +45,11 @@ impl Callable for LoxFunction {
                 .define(param.lexeme(), &arguments[idx]);
         }
 
-        interpreter.execute_block(self.body.clone(), environment)?;
-
-        Ok(Value::Nil)
+        match interpreter.execute_block(self.body.clone(), environment) {
+            Ok(_) => Ok(Value::Nil),
+            Err(Error::Return { value }) => Ok(value),
+            Err(error) => Err(error),
+        }
     }
 
     fn box_clone(&self) -> Box<dyn Callable> {

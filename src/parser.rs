@@ -406,6 +406,19 @@ impl Parser {
         Ok(Stmt::Print(value))
     }
 
+    fn return_statement(&mut self) -> Result<Stmt, Error> {
+        let keyword = self.previous();
+
+        let mut value = Expr::Literal(Value::Nil);
+        if !self.check(TokenType::Semicolon) {
+            value = self.expression()?;
+        }
+
+        self.consume(TokenType::Semicolon, "Expect ';' after return value.")?;
+
+        Ok(Stmt::Return { keyword, value })
+    }
+
     fn while_statement(&mut self) -> Result<Stmt, Error> {
         self.consume(TokenType::LeftParen, "Expect '(' after 'while'.")?;
         let condition = self.expression()?;
@@ -443,6 +456,8 @@ impl Parser {
             self.if_statement()?
         } else if self.is_match(&[TokenType::Print]) {
             self.print_statement()?
+        } else if self.is_match(&[TokenType::Return]) {
+            self.return_statement()?
         } else if self.is_match(&[TokenType::While]) {
             self.while_statement()?
         } else if self.is_match(&[TokenType::LeftBrace]) {
