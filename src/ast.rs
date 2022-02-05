@@ -34,6 +34,11 @@ pub enum Expr {
 pub enum Stmt {
     Block(Vec<Stmt>),
     Expression(Expr),
+    Function {
+        name: Token,
+        params: Vec<Token>,
+        body: Vec<Stmt>,
+    },
     If {
         condition: Expr,
         then_branch: Box<Stmt>,

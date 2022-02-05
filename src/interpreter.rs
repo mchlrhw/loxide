@@ -1,6 +1,7 @@
 use crate::{
     ast::{Expr, Stmt},
     clock::Clock,
+    function::LoxFunction,
     token::{Token, TokenType},
     value::Value,
 };
@@ -13,20 +14,20 @@ pub enum Error {
 }
 
 #[derive(Clone, Default)]
-struct Environment {
+pub struct Environment {
     enclosing: Option<Box<Environment>>,
     values: HashMap<String, Value>,
 }
 
 impl Environment {
-    fn new(enclosing: Environment) -> Self {
+    pub fn new(enclosing: Environment) -> Self {
         Self {
             enclosing: Some(Box::new(enclosing)),
             values: HashMap::new(),
         }
     }
 
-    fn define(&mut self, name: &str, value: &Value) {
+    pub fn define(&mut self, name: &str, value: &Value) {
         self.values.insert(name.to_string(), value.clone());
     }
 
@@ -97,6 +98,7 @@ fn check_number_operands(operator: Token, left: Value, right: Value) -> Result<(
     }
 }
 
+// TODO: Implement globals.
 pub struct Interpreter {
     environment: Environment,
 }
@@ -113,6 +115,10 @@ impl Default for Interpreter {
 impl Interpreter {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn environment(&self) -> &Environment {
+        &self.environment
     }
 
     fn evaluate(&mut self, expr: Expr) -> Result<Value, Error> {
@@ -252,6 +258,24 @@ impl Interpreter {
         }
     }
 
+    pub fn execute_block(
+        &mut self,
+        statements: Vec<Stmt>,
+        environment: Environment,
+    ) -> Result<(), Error> {
+        self.environment = Environment::new(environment);
+
+        for stmt in statements {
+            self.execute(stmt)?;
+        }
+
+        if let Some(environment) = self.environment.enclosing.clone() {
+            self.environment = *environment;
+        }
+
+        Ok(())
+    }
+
     fn execute(&mut self, stmt: Stmt) -> Result<(), Error> {
         match stmt {
             Stmt::Expression(expression) => {
@@ -271,15 +295,7 @@ impl Interpreter {
                 self.environment.define(&name, &value);
             }
             Stmt::Block(statements) => {
-                self.environment = Environment::new(self.environment.clone());
-
-                for stmt in statements {
-                    self.execute(stmt)?;
-                }
-
-                if let Some(environment) = self.environment.enclosing.clone() {
-                    self.environment = *environment;
-                }
+                self.execute_block(statements, self.environment.clone())?;
             }
             Stmt::If {
                 condition,
@@ -296,6 +312,11 @@ impl Interpreter {
                 while is_truthy(&self.evaluate(condition.clone())?) {
                     self.execute(*body.clone())?;
                 }
+            }
+            Stmt::Function { name, params, body } => {
+                let lexeme = name.lexeme().to_string();
+                let function = LoxFunction::new(name, params, body).value();
+                self.environment.define(&lexeme, &function);
             }
         }
 

@@ -4,11 +4,24 @@ use crate::{
     token::{Token, TokenType},
     value::Value,
 };
+use std::fmt;
 
 #[derive(Clone, Debug, thiserror::Error)]
 pub enum Error {
     #[error("parse error")]
     ParseError,
+}
+
+enum FunKind {
+    Function,
+}
+
+impl fmt::Display for FunKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Function => write!(f, "function"),
+        }
+    }
 }
 
 pub struct Parser {
@@ -463,8 +476,40 @@ impl Parser {
         Ok(Stmt::Var { name, initializer })
     }
 
+    fn function(&mut self, kind: FunKind) -> Result<Stmt, Error> {
+        let name = self.consume(TokenType::Identifier, &format!("Expect {kind} name"))?;
+        self.consume(
+            TokenType::LeftParen,
+            &format!("Expect '(' after {kind} name."),
+        )?;
+
+        let mut params = vec![];
+        if !self.check(TokenType::RightParen) {
+            loop {
+                if params.len() >= 255 {
+                    self.error(self.peek(), "Can't have more than 255 parameters");
+                }
+                params.push(self.consume(TokenType::Identifier, "Expect parameter name.")?);
+                if !self.is_match(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+        self.consume(TokenType::RightParen, "Expect ')' after parameters.")?;
+        self.consume(
+            TokenType::LeftBrace,
+            &format!("Expect '{{' before {kind} body."),
+        )?;
+
+        let body = self.block()?;
+
+        Ok(Stmt::Function { name, params, body })
+    }
+
     fn declaration(&mut self) -> Option<Stmt> {
-        let res = if self.is_match(&[TokenType::Var]) {
+        let res = if self.is_match(&[TokenType::Fun]) {
+            self.function(FunKind::Function)
+        } else if self.is_match(&[TokenType::Var]) {
             self.var_declaration()
         } else {
             self.statement()

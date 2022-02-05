@@ -1,6 +1,7 @@
 pub mod ast;
 pub mod callable;
 pub mod clock;
+pub mod function;
 pub mod interpreter;
 pub mod parser;
 pub mod scanner;
