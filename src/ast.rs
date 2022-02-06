@@ -80,7 +80,7 @@ pub enum Stmt {
         value: Expr,
     },
     Var {
-        name: String,
+        name: Token,
         initializer: Option<Expr>,
     },
     While {

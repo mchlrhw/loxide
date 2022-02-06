@@ -473,10 +473,7 @@ impl Parser {
     }
 
     fn var_declaration(&mut self) -> Result<Stmt, Error> {
-        let name = self
-            .consume(TokenType::Identifier, "Expect variable name.")?
-            .lexeme()
-            .to_string();
+        let name = self.consume(TokenType::Identifier, "Expect variable name.")?;
 
         let mut initializer = None;
         if self.is_match(&[TokenType::Equal]) {

@@ -10,6 +10,10 @@ fn run(interpreter: &mut Interpreter, source: &str) {
     if let Ok(statements) = parser.parse() {
         let mut resolver = Resolver::new(interpreter);
         resolver.resolve_statements(statements.clone());
+        if resolver.had_error() {
+            return;
+        }
+
         interpreter.interpret(statements);
     }
 }

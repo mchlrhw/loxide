@@ -359,7 +359,7 @@ impl Interpreter {
                     Value::Nil
                 };
 
-                self.environment.borrow_mut().define(&name, &value);
+                self.environment.borrow_mut().define(name.lexeme(), &value);
             }
             Stmt::Block(statements) => {
                 self.execute_block(statements, Environment::wrap(self.environment.clone()))?;
@@ -381,10 +381,11 @@ impl Interpreter {
                 }
             }
             Stmt::Function { name, params, body } => {
-                let lexeme = name.lexeme().to_string();
                 let function =
-                    LoxFunction::new(name, params, body, self.environment.clone()).value();
-                self.environment.borrow_mut().define(&lexeme, &function);
+                    LoxFunction::new(name.clone(), params, body, self.environment.clone()).value();
+                self.environment
+                    .borrow_mut()
+                    .define(name.lexeme(), &function);
             }
             Stmt::Return { value, .. } => {
                 let value = self.evaluate(value)?;

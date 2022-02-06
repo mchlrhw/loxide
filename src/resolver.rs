@@ -1,13 +1,22 @@
 use crate::{
     ast::{Expr, ExprKind, Stmt},
+    error,
     interpreter::Interpreter,
     token::Token,
 };
 use std::collections::HashMap;
 
+#[derive(Clone, Copy)]
+enum FunKind {
+    None,
+    Function,
+}
+
 pub struct Resolver<'r> {
     interpreter: &'r mut Interpreter,
     scopes: Vec<HashMap<String, bool>>,
+    current_function: FunKind,
+    had_error: bool,
 }
 
 impl<'r> Resolver<'r> {
@@ -17,7 +26,13 @@ impl<'r> Resolver<'r> {
         Self {
             interpreter,
             scopes,
+            current_function: FunKind::None,
+            had_error: false,
         }
+    }
+
+    pub fn had_error(&self) -> bool {
+        self.had_error
     }
 
     fn begin_scope(&mut self) {
@@ -28,9 +43,16 @@ impl<'r> Resolver<'r> {
         self.scopes.pop();
     }
 
-    fn declare(&mut self, name: &str) {
+    fn declare(&mut self, name: &Token) {
         if let Some(scope) = self.scopes.last_mut() {
-            scope.insert(name.to_string(), false);
+            if scope.contains_key(name.lexeme()) {
+                error(
+                    name.line(),
+                    "Already a variable with this name in this scope.",
+                );
+                self.had_error = true;
+            }
+            scope.insert(name.lexeme().to_string(), false);
         }
     }
 
@@ -82,10 +104,11 @@ impl<'r> Resolver<'r> {
             ExprKind::Variable(name) => {
                 if let Some(scope) = self.scopes.last() {
                     if matches!(scope.get(name.lexeme()), Some(false)) {
-                        crate::error(
+                        error(
                             name.line(),
                             "Can't read local variable in its own initializer.",
                         );
+                        self.had_error = true;
                     }
                 }
 
@@ -94,14 +117,17 @@ impl<'r> Resolver<'r> {
         }
     }
 
-    fn resolve_function(&mut self, params: Vec<Token>, body: Vec<Stmt>) {
+    fn resolve_function(&mut self, params: Vec<Token>, body: Vec<Stmt>, kind: FunKind) {
+        let enclosing_function = self.current_function;
+        self.current_function = kind;
         self.begin_scope();
         for param in params {
-            self.declare(param.lexeme());
+            self.declare(&param);
             self.define(param.lexeme());
         }
         self.resolve_statements(body);
         self.end_scope();
+        self.current_function = enclosing_function;
     }
 
     fn resolve_stmt(&mut self, stmt: Stmt) {
@@ -115,9 +141,9 @@ impl<'r> Resolver<'r> {
                 self.resolve_expr(expr);
             }
             Stmt::Function { name, params, body } => {
-                self.declare(name.lexeme());
+                self.declare(&name);
                 self.define(name.lexeme());
-                self.resolve_function(params, body);
+                self.resolve_function(params, body, FunKind::Function);
             }
             Stmt::If {
                 condition,
@@ -133,7 +159,11 @@ impl<'r> Resolver<'r> {
             Stmt::Print(expr) => {
                 self.resolve_expr(expr);
             }
-            Stmt::Return { value, .. } => {
+            Stmt::Return { value, keyword } => {
+                if matches!(self.current_function, FunKind::None) {
+                    error(keyword.line(), "Can't return from top-level code.");
+                    self.had_error = true;
+                }
                 self.resolve_expr(value);
             }
             Stmt::Var { name, initializer } => {
@@ -141,7 +171,7 @@ impl<'r> Resolver<'r> {
                 if let Some(initializer) = initializer {
                     self.resolve_expr(initializer);
                 }
-                self.define(&name);
+                self.define(name.lexeme());
             }
             Stmt::While { condition, body } => {
                 self.resolve_expr(condition);
