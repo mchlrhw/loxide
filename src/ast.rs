@@ -1,7 +1,9 @@
 use crate::{token::Token, value::Value};
+use std::hash::{Hash, Hasher};
+use uuid::Uuid;
 
 #[derive(Clone, Debug)]
-pub enum Expr {
+pub enum ExprKind {
     Assign {
         name: Token,
         value: Box<Expr>,
@@ -28,6 +30,34 @@ pub enum Expr {
         right: Box<Expr>,
     },
     Variable(Token),
+}
+
+#[derive(Clone, Debug)]
+pub struct Expr {
+    id: Uuid,
+    pub kind: ExprKind,
+}
+
+impl PartialEq for Expr {
+    fn eq(&self, other: &Expr) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Expr {}
+
+impl Hash for Expr {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+impl Expr {
+    pub fn new(kind: ExprKind) -> Self {
+        let id = Uuid::new_v4();
+
+        Self { id, kind }
+    }
 }
 
 #[derive(Clone, Debug)]

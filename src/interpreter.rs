@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expr, Stmt},
+    ast::{Expr, ExprKind, Stmt},
     clock::Clock,
     function::LoxFunction,
     token::{Token, TokenType},
@@ -36,6 +36,20 @@ impl Environment {
         self.values.insert(name.to_string(), value.clone());
     }
 
+    fn ancestor(&self, distance: usize) -> Rc<RefCell<Environment>> {
+        let mut environment = self.enclosing.clone().expect("must have an ancestor");
+        for _ in 1..distance {
+            let new_env = environment
+                .borrow()
+                .enclosing
+                .clone()
+                .expect("must have an ancestor");
+            environment = new_env;
+        }
+
+        environment
+    }
+
     fn assign(&mut self, name: &Token, value: &Value) -> Result<(), Error> {
         let lexeme = name.lexeme();
 
@@ -55,6 +69,14 @@ impl Environment {
         }
     }
 
+    fn assign_at(&mut self, distance: usize, name: &Token, value: &Value) -> Result<(), Error> {
+        if distance == 0 {
+            self.assign(name, value)
+        } else {
+            self.ancestor(distance).borrow_mut().assign(name, value)
+        }
+    }
+
     fn get(&self, name: &Token) -> Result<Value, Error> {
         let lexeme = name.lexeme();
 
@@ -69,6 +91,14 @@ impl Environment {
                 message: format!("Undefined variable '{lexeme}'."),
                 line: name.line(),
             })
+        }
+    }
+
+    fn get_at(&self, distance: usize, name: &Token) -> Result<Value, Error> {
+        if distance == 0 {
+            self.get(name)
+        } else {
+            self.ancestor(distance).borrow().get(name)
         }
     }
 }
@@ -106,6 +136,7 @@ fn check_number_operands(operator: Token, left: Value, right: Value) -> Result<(
 pub struct Interpreter {
     globals: Rc<RefCell<Environment>>,
     environment: Rc<RefCell<Environment>>,
+    locals: HashMap<Expr, usize>,
 }
 
 impl Default for Interpreter {
@@ -114,10 +145,12 @@ impl Default for Interpreter {
         globals.borrow_mut().define("clock", &Clock::value());
 
         let environment = globals.clone();
+        let locals = HashMap::new();
 
         Self {
             globals,
             environment,
+            locals,
         }
     }
 }
@@ -131,11 +164,20 @@ impl Interpreter {
         self.globals.clone()
     }
 
+    fn lookup_variable(&self, name: &Token, expr: &Expr) -> Result<Value, Error> {
+        let distance = self.locals.get(expr);
+        if let Some(distance) = distance {
+            self.environment.borrow().get_at(*distance, name)
+        } else {
+            self.globals.borrow().get(name)
+        }
+    }
+
     fn evaluate(&mut self, expr: Expr) -> Result<Value, Error> {
-        match expr {
-            Expr::Literal(value) => Ok(value),
-            Expr::Grouping(group) => self.evaluate(*group),
-            Expr::Unary { operator, right } => {
+        match expr.kind {
+            ExprKind::Literal(value) => Ok(value),
+            ExprKind::Grouping(group) => self.evaluate(*group),
+            ExprKind::Unary { operator, right } => {
                 let value = self.evaluate(*right)?;
 
                 match operator.typ() {
@@ -148,7 +190,7 @@ impl Interpreter {
                     typ => panic!("{typ:?} is not a valid unary operator"),
                 }
             }
-            Expr::Binary {
+            ExprKind::Binary {
                 left,
                 operator,
                 right,
@@ -211,14 +253,24 @@ impl Interpreter {
                     typ => panic!("{typ:?} is not a valid binary operator."),
                 }
             }
-            Expr::Variable(name) => self.environment.borrow().get(&name),
-            Expr::Assign { name, value } => {
-                let value = self.evaluate(*value)?;
-                self.environment.borrow_mut().assign(&name, &value)?;
+            ExprKind::Variable(ref name) => self.lookup_variable(name, &expr),
+            ExprKind::Assign {
+                ref name,
+                ref value,
+            } => {
+                let value = self.evaluate(*value.clone())?;
+
+                if let Some(distance) = self.locals.get(&expr) {
+                    self.environment
+                        .borrow_mut()
+                        .assign_at(*distance, name, &value)?;
+                } else {
+                    self.globals.borrow_mut().assign(name, &value)?;
+                }
 
                 Ok(value)
             }
-            Expr::Logical {
+            ExprKind::Logical {
                 left,
                 operator,
                 right,
@@ -235,7 +287,7 @@ impl Interpreter {
 
                 self.evaluate(*right)
             }
-            Expr::Call {
+            ExprKind::Call {
                 callee,
                 paren,
                 arguments,
@@ -342,6 +394,10 @@ impl Interpreter {
         }
 
         Ok(())
+    }
+
+    pub fn resolve(&mut self, expr: Expr, depth: usize) {
+        self.locals.insert(expr, depth);
     }
 
     pub fn interpret(&mut self, statements: Vec<Stmt>) {

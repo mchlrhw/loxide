@@ -17,9 +17,3 @@ impl Clone for Box<dyn Callable> {
         self.box_clone()
     }
 }
-
-impl PartialEq for Box<dyn Callable> {
-    fn eq(&self, _other: &Box<dyn Callable>) -> bool {
-        false
-    }
-}

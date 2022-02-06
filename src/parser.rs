@@ -1,5 +1,5 @@
 use crate::{
-    ast::{Expr, Stmt},
+    ast::{Expr, ExprKind::*, Stmt},
     report,
     token::{Token, TokenType},
     value::Value,
@@ -123,25 +123,25 @@ impl Parser {
 
     fn primary(&mut self) -> Result<Expr, Error> {
         if self.is_match(&[TokenType::False]) {
-            Ok(Expr::Literal(Value::Boolean(false)))
+            Ok(Expr::new(Literal(Value::Boolean(false))))
         } else if self.is_match(&[TokenType::True]) {
-            Ok(Expr::Literal(Value::Boolean(true)))
+            Ok(Expr::new(Literal(Value::Boolean(true))))
         } else if self.is_match(&[TokenType::Nil]) {
-            Ok(Expr::Literal(Value::Nil))
+            Ok(Expr::new(Literal(Value::Nil)))
         } else if self.is_match(&[TokenType::Number, TokenType::String]) {
-            Ok(Expr::Literal(
+            Ok(Expr::new(Literal(
                 self.previous()
                     .value()
                     .clone()
                     .expect("must have a literal"),
-            ))
+            )))
         } else if self.is_match(&[TokenType::Identifier]) {
-            Ok(Expr::Variable(self.previous()))
+            Ok(Expr::new(Variable(self.previous())))
         } else if self.is_match(&[TokenType::LeftParen]) {
             let expr = self.expression()?;
             self.consume(TokenType::RightParen, "Expect ')' after expression")?;
 
-            Ok(Expr::Grouping(Box::new(expr)))
+            Ok(Expr::new(Grouping(Box::new(expr))))
         } else {
             self.error(self.peek(), "Expect expression.");
 
@@ -167,11 +167,11 @@ impl Parser {
 
         let paren = self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
 
-        Ok(Expr::Call {
+        Ok(Expr::new(Call {
             callee: Box::new(callee),
             paren,
             arguments,
-        })
+        }))
     }
 
     fn call(&mut self) -> Result<Expr, Error> {
@@ -193,7 +193,7 @@ impl Parser {
             let operator = self.previous();
             let right = Box::new(self.unary()?);
 
-            Expr::Unary { operator, right }
+            Expr::new(Unary { operator, right })
         } else {
             self.call()?
         };
@@ -208,11 +208,11 @@ impl Parser {
             let operator = self.previous();
             let right = Box::new(self.unary()?);
 
-            expr = Expr::Binary {
+            expr = Expr::new(Binary {
                 left: Box::new(expr),
                 operator,
                 right,
-            };
+            });
         }
 
         Ok(expr)
@@ -225,11 +225,11 @@ impl Parser {
             let operator = self.previous();
             let right = Box::new(self.factor()?);
 
-            expr = Expr::Binary {
+            expr = Expr::new(Binary {
                 left: Box::new(expr),
                 operator,
                 right,
-            };
+            });
         }
 
         Ok(expr)
@@ -247,11 +247,11 @@ impl Parser {
             let operator = self.previous();
             let right = Box::new(self.term()?);
 
-            expr = Expr::Binary {
+            expr = Expr::new(Binary {
                 left: Box::new(expr),
                 operator,
                 right,
-            };
+            });
         }
 
         Ok(expr)
@@ -264,11 +264,11 @@ impl Parser {
             let operator = self.previous();
             let right = Box::new(self.comparison()?);
 
-            expr = Expr::Binary {
+            expr = Expr::new(Binary {
                 left: Box::new(expr),
                 operator,
                 right,
-            };
+            });
         }
 
         Ok(expr)
@@ -281,11 +281,11 @@ impl Parser {
             let operator = self.previous();
             let right = Box::new(self.equality()?);
 
-            expr = Expr::Logical {
+            expr = Expr::new(Logical {
                 left: Box::new(expr),
                 operator,
                 right,
-            };
+            });
         }
 
         Ok(expr)
@@ -298,11 +298,11 @@ impl Parser {
             let operator = self.previous();
             let right = Box::new(self.and()?);
 
-            expr = Expr::Logical {
+            expr = Expr::new(Logical {
                 left: Box::new(expr),
                 operator,
                 right,
-            };
+            });
         }
 
         Ok(expr)
@@ -315,11 +315,11 @@ impl Parser {
             let equals = self.previous();
             let value = self.assignment()?;
 
-            if let Expr::Variable(name) = expr {
-                return Ok(Expr::Assign {
+            if let Variable(name) = expr.kind {
+                return Ok(Expr::new(Assign {
                     name,
                     value: Box::new(value),
-                });
+                }));
             }
 
             self.error(equals, "Invalid assignment target.");
@@ -365,7 +365,7 @@ impl Parser {
         }
 
         let condition = match condition {
-            None => Expr::Literal(Value::Boolean(true)),
+            None => Expr::new(Literal(Value::Boolean(true))),
             Some(expr) => expr,
         };
 
@@ -409,7 +409,7 @@ impl Parser {
     fn return_statement(&mut self) -> Result<Stmt, Error> {
         let keyword = self.previous();
 
-        let mut value = Expr::Literal(Value::Nil);
+        let mut value = Expr::new(Literal(Value::Nil));
         if !self.check(TokenType::Semicolon) {
             value = self.expression()?;
         }
