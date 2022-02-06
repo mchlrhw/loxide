@@ -330,7 +330,8 @@ impl Interpreter {
             }
             Stmt::Function { name, params, body } => {
                 let lexeme = name.lexeme().to_string();
-                let function = LoxFunction::new(name, params, body).value();
+                let function =
+                    LoxFunction::new(name, params, body, self.environment.clone()).value();
                 self.environment.borrow_mut().define(&lexeme, &function);
             }
             Stmt::Return { value, .. } => {

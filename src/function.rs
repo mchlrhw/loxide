@@ -5,18 +5,29 @@ use crate::{
     token::Token,
     value::Value,
 };
-use std::fmt;
+use std::{cell::RefCell, fmt, rc::Rc};
 
 #[derive(Clone, Debug)]
 pub struct LoxFunction {
     name: Token,
     params: Vec<Token>,
     body: Vec<Stmt>,
+    closure: Rc<RefCell<Environment>>,
 }
 
 impl LoxFunction {
-    pub fn new(name: Token, params: Vec<Token>, body: Vec<Stmt>) -> Self {
-        Self { name, params, body }
+    pub fn new(
+        name: Token,
+        params: Vec<Token>,
+        body: Vec<Stmt>,
+        closure: Rc<RefCell<Environment>>,
+    ) -> Self {
+        Self {
+            name,
+            params,
+            body,
+            closure,
+        }
     }
 
     pub fn value(self) -> Value {
@@ -38,7 +49,7 @@ impl Callable for LoxFunction {
     }
 
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Result<Value, Error> {
-        let environment = Environment::wrap(interpreter.globals());
+        let environment = Environment::wrap(self.closure.clone());
         for (idx, param) in self.params.iter().enumerate() {
             environment
                 .borrow_mut()
