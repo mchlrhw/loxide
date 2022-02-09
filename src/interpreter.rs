@@ -320,7 +320,7 @@ impl Interpreter {
             }
             ExprKind::Get { object, name } => {
                 if let Value::Instance(instance) = self.evaluate(*object)? {
-                    instance.get(&name)
+                    instance.borrow().get(&name)
                 } else {
                     Err(Error::Runtime {
                         message: "Only instances have properties.".to_string(),
@@ -333,9 +333,9 @@ impl Interpreter {
                 name,
                 value,
             } => {
-                if let Value::Instance(mut instance) = self.evaluate(*object)? {
+                if let Value::Instance(instance) = self.evaluate(*object)? {
                     let value = self.evaluate(*value)?;
-                    instance.set(&name, value.clone());
+                    instance.borrow_mut().set(&name, value.clone());
 
                     Ok(value)
                 } else {

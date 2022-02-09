@@ -4,7 +4,7 @@ use crate::{
     token::Token,
     value::Value,
 };
-use std::{collections::HashMap, fmt};
+use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc};
 
 #[derive(Clone, Debug)]
 pub struct LoxClass {
@@ -60,7 +60,7 @@ impl LoxInstance {
     }
 
     pub fn value(self) -> Value {
-        Value::Instance(self)
+        Value::Instance(Rc::new(RefCell::new(self)))
     }
 
     pub fn get(&self, name: &Token) -> Result<Value, Error> {
