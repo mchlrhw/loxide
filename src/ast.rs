@@ -18,6 +18,10 @@ pub enum ExprKind {
         paren: Token,
         arguments: Vec<Expr>,
     },
+    Get {
+        object: Box<Expr>,
+        name: Token,
+    },
     Grouping(Box<Expr>),
     Literal(Value),
     Logical {

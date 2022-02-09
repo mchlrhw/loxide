@@ -318,6 +318,16 @@ impl Interpreter {
                     })
                 }
             }
+            ExprKind::Get { object, name } => {
+                if let Value::Instance(instance) = self.evaluate(*object)? {
+                    instance.get(&name)
+                } else {
+                    Err(Error::Runtime {
+                        message: "Only instances have properties.".to_string(),
+                        line: name.line(),
+                    })
+                }
+            }
         }
     }
 

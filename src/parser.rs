@@ -182,6 +182,13 @@ impl Parser {
         loop {
             if self.is_match(&[TokenType::LeftParen]) {
                 expr = self.finish_call(expr)?;
+            } else if self.is_match(&[TokenType::Dot]) {
+                let name =
+                    self.consume(TokenType::Identifier, "Expect property name after '.'.")?;
+                expr = Expr::new(Get {
+                    object: Box::new(expr),
+                    name,
+                });
             } else {
                 break;
             }
@@ -537,7 +544,7 @@ impl Parser {
     fn declaration(&mut self) -> Option<Stmt> {
         let res = if self.is_match(&[TokenType::Class]) {
             self.class_declaration()
-        }else if self.is_match(&[TokenType::Fun]) {
+        } else if self.is_match(&[TokenType::Fun]) {
             self.function(FunKind::Function)
         } else if self.is_match(&[TokenType::Var]) {
             self.var_declaration()

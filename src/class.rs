@@ -1,9 +1,10 @@
 use crate::{
     callable::Callable,
     interpreter::{Error, Interpreter},
+    token::Token,
     value::Value,
 };
-use std::fmt;
+use std::{collections::HashMap, fmt};
 
 #[derive(Clone, Debug)]
 pub struct LoxClass {
@@ -47,17 +48,30 @@ impl Callable for LoxClass {
 #[derive(Clone, Debug)]
 pub struct LoxInstance {
     class: LoxClass,
+    fields: HashMap<String, Value>,
 }
 
 impl LoxInstance {
     pub fn new(class: &LoxClass) -> Self {
         Self {
             class: class.clone(),
+            fields: HashMap::new(),
         }
     }
 
     pub fn value(self) -> Value {
         Value::Instance(self)
+    }
+
+    pub fn get(&self, name: &Token) -> Result<Value, Error> {
+        if let Some(value) = self.fields.get(name.lexeme()) {
+            Ok(value.clone())
+        } else {
+            Err(Error::Runtime {
+                message: format!("Undefined property '{}'.", name.lexeme()),
+                line: name.line(),
+            })
+        }
     }
 }
 

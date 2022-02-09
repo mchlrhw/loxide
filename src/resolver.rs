@@ -90,6 +90,9 @@ impl<'r> Resolver<'r> {
                     self.resolve_expr(expr);
                 }
             }
+            ExprKind::Get { object, .. } => {
+                self.resolve_expr(*object);
+            }
             ExprKind::Grouping(expr) => {
                 self.resolve_expr(*expr);
             }
