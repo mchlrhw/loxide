@@ -10,6 +10,7 @@ use std::collections::HashMap;
 enum FunKind {
     None,
     Function,
+    Method,
 }
 
 pub struct Resolver<'r> {
@@ -144,9 +145,18 @@ impl<'r> Resolver<'r> {
                 self.resolve_statements(statements);
                 self.end_scope();
             }
-            Stmt::Class { name, .. } => {
+            Stmt::Class { name, methods } => {
                 self.declare(&name);
                 self.define(&name);
+
+                for method in methods {
+                    if let Stmt::Function { params, body, .. } = method {
+                        let declaration = FunKind::Method;
+                        self.resolve_function(params, body, declaration);
+                    } else {
+                        panic!("Cannot resolve '{method:?}' as Stmt::Function");
+                    }
+                }
             }
             Stmt::Expression(expr) => {
                 self.resolve_expr(expr);

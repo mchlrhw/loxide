@@ -420,11 +420,24 @@ impl Interpreter {
 
                 return Err(Error::Return { value });
             }
-            Stmt::Class { name, .. } => {
-                let mut environment = self.environment.borrow_mut();
-                environment.define(name.lexeme(), &Value::Nil);
-                let class = LoxClass::new(name.lexeme()).value();
-                environment.assign(&name, &class)?;
+            Stmt::Class { name, methods } => {
+                {
+                    self.environment
+                        .borrow_mut()
+                        .define(name.lexeme(), &Value::Nil);
+                }
+
+                let mut functions = HashMap::new();
+                for method in methods {
+                    if let Stmt::Function { name, params, body } = method {
+                        let function =
+                            LoxFunction::new(name.clone(), params, body, self.environment.clone());
+                        functions.insert(name.lexeme().to_string(), function);
+                    }
+                }
+
+                let class = LoxClass::new(name.lexeme(), functions).value();
+                self.environment.borrow_mut().assign(&name, &class)?;
             }
         }
 

@@ -1,5 +1,6 @@
 use crate::{
     callable::Callable,
+    function::LoxFunction,
     interpreter::{Error, Interpreter},
     token::Token,
     value::Value,
@@ -9,17 +10,23 @@ use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc};
 #[derive(Clone, Debug)]
 pub struct LoxClass {
     name: String,
+    methods: HashMap<String, LoxFunction>,
 }
 
 impl LoxClass {
-    pub fn new(name: &str) -> Self {
+    pub fn new(name: &str, methods: HashMap<String, LoxFunction>) -> Self {
         Self {
             name: name.to_string(),
+            methods,
         }
     }
 
     pub fn value(self) -> Value {
         Value::Callable(Box::new(self))
+    }
+
+    pub fn find_method(&self, name: &str) -> Option<LoxFunction> {
+        self.methods.get(name).cloned()
     }
 }
 
@@ -66,6 +73,8 @@ impl LoxInstance {
     pub fn get(&self, name: &Token) -> Result<Value, Error> {
         if let Some(value) = self.fields.get(name.lexeme()) {
             Ok(value.clone())
+        } else if let Some(method) = self.class.find_method(name.lexeme()) {
+            Ok(method.value())
         } else {
             Err(Error::Runtime {
                 message: format!("Undefined property '{}'.", name.lexeme()),
