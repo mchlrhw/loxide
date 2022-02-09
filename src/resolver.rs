@@ -10,6 +10,7 @@ use std::collections::HashMap;
 enum FunKind {
     None,
     Function,
+    Initializer,
     Method,
 }
 
@@ -174,8 +175,12 @@ impl<'r> Resolver<'r> {
                 }
 
                 for method in methods {
-                    if let Stmt::Function { params, body, .. } = method {
-                        let declaration = FunKind::Method;
+                    if let Stmt::Function { name, params, body } = method {
+                        let declaration = if name.lexeme() == "init" {
+                            FunKind::Initializer
+                        } else {
+                            FunKind::Method
+                        };
                         self.resolve_function(params, body, declaration);
                     } else {
                         panic!("Cannot resolve '{method:?}' as Stmt::Function");
@@ -212,7 +217,15 @@ impl<'r> Resolver<'r> {
                     error(keyword.line(), "Can't return from top-level code.");
                     self.had_error = true;
                 }
-                self.resolve_expr(value);
+
+                if let Some(value) = value {
+                    if matches!(self.current_function, FunKind::Initializer) {
+                        error(keyword.line(), "Can't return a value from an initializer.");
+                        self.had_error = true;
+                    }
+
+                    self.resolve_expr(value);
+                }
             }
             Stmt::Var { name, initializer } => {
                 self.declare(&name);

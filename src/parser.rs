@@ -423,9 +423,9 @@ impl Parser {
     fn return_statement(&mut self) -> Result<Stmt, Error> {
         let keyword = self.previous();
 
-        let mut value = Expr::new(Literal(Value::Nil));
+        let mut value = None;
         if !self.check(TokenType::Semicolon) {
-            value = self.expression()?;
+            value = Some(self.expression()?);
         }
 
         self.consume(TokenType::Semicolon, "Expect ';' after return value.")?;

@@ -3,7 +3,7 @@ use crate::{
     callable::Callable,
     class::LoxInstance,
     interpreter::{Environment, Error, Interpreter},
-    token::Token,
+    token::{Token, TokenType},
     value::Value,
 };
 use std::{cell::RefCell, fmt, rc::Rc};
@@ -14,6 +14,7 @@ pub struct LoxFunction {
     params: Vec<Token>,
     body: Vec<Stmt>,
     closure: Rc<RefCell<Environment>>,
+    is_initializer: bool,
 }
 
 impl LoxFunction {
@@ -22,12 +23,14 @@ impl LoxFunction {
         params: Vec<Token>,
         body: Vec<Stmt>,
         closure: Rc<RefCell<Environment>>,
+        is_initializer: bool,
     ) -> Self {
         Self {
             name,
             params,
             body,
             closure,
+            is_initializer,
         }
     }
 
@@ -41,7 +44,13 @@ impl LoxFunction {
             .borrow_mut()
             .define("this", &Value::Instance(instance));
 
-        LoxFunction::new(self.name, self.params, self.body, environment)
+        LoxFunction::new(
+            self.name,
+            self.params,
+            self.body,
+            environment,
+            self.is_initializer,
+        )
     }
 }
 
@@ -67,8 +76,24 @@ impl Callable for LoxFunction {
         }
 
         match interpreter.execute_block(self.body.clone(), environment) {
-            Ok(_) => Ok(Value::Nil),
-            Err(Error::Return { value }) => Ok(value),
+            Ok(_) => {
+                if !self.is_initializer {
+                    Ok(Value::Nil)
+                } else {
+                    self.closure
+                        .borrow()
+                        .get(&Token::new(TokenType::This, "this", None, 42))
+                }
+            }
+            Err(Error::Return { value }) => {
+                if self.is_initializer {
+                    self.closure
+                        .borrow()
+                        .get(&Token::new(TokenType::This, "this", None, 42))
+                } else {
+                    Ok(value)
+                }
+            }
             Err(error) => Err(error),
         }
     }

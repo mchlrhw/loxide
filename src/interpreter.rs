@@ -78,7 +78,7 @@ impl Environment {
         }
     }
 
-    fn get(&self, name: &Token) -> Result<Value, Error> {
+    pub fn get(&self, name: &Token) -> Result<Value, Error> {
         let lexeme = name.lexeme();
 
         if let Some(value) = self.values.get(lexeme) {
@@ -411,13 +411,18 @@ impl Interpreter {
             }
             Stmt::Function { name, params, body } => {
                 let function =
-                    LoxFunction::new(name.clone(), params, body, self.environment.clone()).value();
+                    LoxFunction::new(name.clone(), params, body, self.environment.clone(), false)
+                        .value();
                 self.environment
                     .borrow_mut()
                     .define(name.lexeme(), &function);
             }
             Stmt::Return { value, .. } => {
-                let value = self.evaluate(value)?;
+                let value = if let Some(value) = value {
+                    self.evaluate(value)?
+                } else {
+                    Value::Nil
+                };
 
                 return Err(Error::Return { value });
             }
@@ -431,8 +436,13 @@ impl Interpreter {
                 let mut functions = HashMap::new();
                 for method in methods {
                     if let Stmt::Function { name, params, body } = method {
-                        let function =
-                            LoxFunction::new(name.clone(), params, body, self.environment.clone());
+                        let function = LoxFunction::new(
+                            name.clone(),
+                            params,
+                            body,
+                            self.environment.clone(),
+                            name.lexeme() == "init",
+                        );
                         functions.insert(name.lexeme().to_string(), function);
                     }
                 }
