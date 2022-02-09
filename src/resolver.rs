@@ -13,10 +13,17 @@ enum FunKind {
     Method,
 }
 
+#[derive(Clone, Copy)]
+enum ClassKind {
+    None,
+    Class,
+}
+
 pub struct Resolver<'r> {
     interpreter: &'r mut Interpreter,
     scopes: Vec<HashMap<String, bool>>,
     current_function: FunKind,
+    current_class: ClassKind,
     had_error: bool,
 }
 
@@ -28,6 +35,7 @@ impl<'r> Resolver<'r> {
             interpreter,
             scopes,
             current_function: FunKind::None,
+            current_class: ClassKind::None,
             had_error: false,
         }
     }
@@ -107,6 +115,11 @@ impl<'r> Resolver<'r> {
                 self.resolve_expr(*object);
             }
             ExprKind::This(keyword) => {
+                if matches!(self.current_class, ClassKind::None) {
+                    error(keyword.line(), "Can't use 'this' outside of a class.");
+                    self.had_error = true;
+                }
+
                 self.resolve_local(expr_clone, &keyword);
             }
             ExprKind::Unary { right, .. } => {
@@ -149,6 +162,9 @@ impl<'r> Resolver<'r> {
                 self.end_scope();
             }
             Stmt::Class { name, methods } => {
+                let enclosing_class = self.current_class;
+                self.current_class = ClassKind::Class;
+
                 self.declare(&name);
                 self.define(&name);
 
@@ -167,6 +183,7 @@ impl<'r> Resolver<'r> {
                 }
 
                 self.end_scope();
+                self.current_class = enclosing_class;
             }
             Stmt::Expression(expr) => {
                 self.resolve_expr(expr);
