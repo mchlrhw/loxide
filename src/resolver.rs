@@ -101,6 +101,10 @@ impl<'r> Resolver<'r> {
                 self.resolve_expr(*left);
                 self.resolve_expr(*right);
             }
+            ExprKind::Set { object, value, .. } => {
+                self.resolve_expr(*value);
+                self.resolve_expr(*object);
+            }
             ExprKind::Unary { right, .. } => {
                 self.resolve_expr(*right);
             }

@@ -322,12 +322,15 @@ impl Parser {
 
         if self.is_match(&[TokenType::Equal]) {
             let equals = self.previous();
-            let value = self.assignment()?;
+            let value = Box::new(self.assignment()?);
 
             if let Variable(name) = expr.kind {
-                return Ok(Expr::new(Assign {
+                return Ok(Expr::new(Assign { name, value }));
+            } else if let Get { object, name } = expr.kind {
+                return Ok(Expr::new(Set {
+                    object,
                     name,
-                    value: Box::new(value),
+                    value,
                 }));
             }
 

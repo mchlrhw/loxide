@@ -73,6 +73,10 @@ impl LoxInstance {
             })
         }
     }
+
+    pub fn set(&mut self, name: &Token, value: Value) {
+        self.fields.insert(name.lexeme().to_string(), value);
+    }
 }
 
 impl fmt::Display for LoxInstance {

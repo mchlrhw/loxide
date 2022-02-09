@@ -328,6 +328,23 @@ impl Interpreter {
                     })
                 }
             }
+            ExprKind::Set {
+                object,
+                name,
+                value,
+            } => {
+                if let Value::Instance(mut instance) = self.evaluate(*object)? {
+                    let value = self.evaluate(*value)?;
+                    instance.set(&name, value.clone());
+
+                    Ok(value)
+                } else {
+                    Err(Error::Runtime {
+                        message: "Only instances have fields.".to_string(),
+                        line: name.line(),
+                    })
+                }
+            }
         }
     }
 
