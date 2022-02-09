@@ -56,9 +56,9 @@ impl<'r> Resolver<'r> {
         }
     }
 
-    fn define(&mut self, name: &str) {
+    fn define(&mut self, name: &Token) {
         if let Some(scope) = self.scopes.last_mut() {
-            scope.insert(name.to_string(), true);
+            scope.insert(name.lexeme().to_string(), true);
         }
     }
 
@@ -123,7 +123,7 @@ impl<'r> Resolver<'r> {
         self.begin_scope();
         for param in params {
             self.declare(&param);
-            self.define(param.lexeme());
+            self.define(&param);
         }
         self.resolve_statements(body);
         self.end_scope();
@@ -137,12 +137,16 @@ impl<'r> Resolver<'r> {
                 self.resolve_statements(statements);
                 self.end_scope();
             }
+            Stmt::Class { name, .. } => {
+                self.declare(&name);
+                self.define(&name);
+            }
             Stmt::Expression(expr) => {
                 self.resolve_expr(expr);
             }
             Stmt::Function { name, params, body } => {
                 self.declare(&name);
-                self.define(name.lexeme());
+                self.define(&name);
                 self.resolve_function(params, body, FunKind::Function);
             }
             Stmt::If {
@@ -171,7 +175,7 @@ impl<'r> Resolver<'r> {
                 if let Some(initializer) = initializer {
                     self.resolve_expr(initializer);
                 }
-                self.define(name.lexeme());
+                self.define(&name);
             }
             Stmt::While { condition, body } => {
                 self.resolve_expr(condition);

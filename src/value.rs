@@ -1,10 +1,11 @@
-use crate::callable::Callable;
+use crate::{callable::Callable, class::LoxInstance};
 use std::fmt::{self, Debug};
 
 #[derive(Clone, Debug)]
 pub enum Value {
     Boolean(bool),
     Callable(Box<dyn Callable>),
+    Instance(LoxInstance),
     Nil,
     Number(f64),
     String(String),
@@ -15,6 +16,7 @@ impl fmt::Display for Value {
         match self {
             Self::Boolean(b) => write!(f, "{b}"),
             Self::Callable(c) => write!(f, "{c}"),
+            Self::Instance(i) => write!(f, "{i}"),
             Self::Nil => write!(f, "nil"),
             Self::Number(n) => write!(f, "{n}"),
             Self::String(s) => write!(f, "{s}"),

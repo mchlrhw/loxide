@@ -63,6 +63,10 @@ impl Expr {
 #[derive(Clone, Debug)]
 pub enum Stmt {
     Block(Vec<Stmt>),
+    Class {
+        name: Token,
+        methods: Vec<Stmt>,
+    },
     Expression(Expr),
     Function {
         name: Token,

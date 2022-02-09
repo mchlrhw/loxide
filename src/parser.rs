@@ -14,12 +14,14 @@ pub enum Error {
 
 enum FunKind {
     Function,
+    Method,
 }
 
 impl fmt::Display for FunKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Function => write!(f, "function"),
+            Self::Method => write!(f, "method"),
         }
     }
 }
@@ -488,6 +490,20 @@ impl Parser {
         Ok(Stmt::Var { name, initializer })
     }
 
+    fn class_declaration(&mut self) -> Result<Stmt, Error> {
+        let name = self.consume(TokenType::Identifier, "Except class name.")?;
+        self.consume(TokenType::LeftBrace, "Expect '{' before class body.")?;
+
+        let mut methods = vec![];
+        while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+            methods.push(self.function(FunKind::Method)?);
+        }
+
+        self.consume(TokenType::RightBrace, "Expect '}' after class body.")?;
+
+        Ok(Stmt::Class { name, methods })
+    }
+
     fn function(&mut self, kind: FunKind) -> Result<Stmt, Error> {
         let name = self.consume(TokenType::Identifier, &format!("Expect {kind} name"))?;
         self.consume(
@@ -519,7 +535,9 @@ impl Parser {
     }
 
     fn declaration(&mut self) -> Option<Stmt> {
-        let res = if self.is_match(&[TokenType::Fun]) {
+        let res = if self.is_match(&[TokenType::Class]) {
+            self.class_declaration()
+        }else if self.is_match(&[TokenType::Fun]) {
             self.function(FunKind::Function)
         } else if self.is_match(&[TokenType::Var]) {
             self.var_declaration()

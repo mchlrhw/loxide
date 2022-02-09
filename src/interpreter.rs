@@ -1,5 +1,6 @@
 use crate::{
     ast::{Expr, ExprKind, Stmt},
+    class::LoxClass,
     clock::Clock,
     function::LoxFunction,
     token::{Token, TokenType},
@@ -391,6 +392,12 @@ impl Interpreter {
                 let value = self.evaluate(value)?;
 
                 return Err(Error::Return { value });
+            }
+            Stmt::Class { name, .. } => {
+                let mut environment = self.environment.borrow_mut();
+                environment.define(name.lexeme(), &Value::Nil);
+                let class = LoxClass::new(name.lexeme()).value();
+                environment.assign(&name, &class)?;
             }
         }
 
