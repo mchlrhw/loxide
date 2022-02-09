@@ -70,10 +70,12 @@ impl LoxInstance {
         Value::Instance(Rc::new(RefCell::new(self)))
     }
 
-    pub fn get(&self, name: &Token) -> Result<Value, Error> {
-        if let Some(value) = self.fields.get(name.lexeme()) {
+    pub fn get(instance: Rc<RefCell<Self>>, name: &Token) -> Result<Value, Error> {
+        let instance_clone = instance.clone();
+        if let Some(value) = instance.borrow().fields.get(name.lexeme()) {
             Ok(value.clone())
-        } else if let Some(method) = self.class.find_method(name.lexeme()) {
+        } else if let Some(method) = instance.borrow().class.find_method(name.lexeme()) {
+            let method = method.bind(instance_clone);
             Ok(method.value())
         } else {
             Err(Error::Runtime {

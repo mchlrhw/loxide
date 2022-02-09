@@ -34,6 +34,7 @@ pub enum ExprKind {
         name: Token,
         value: Box<Expr>,
     },
+    This(Token),
     Unary {
         operator: Token,
         right: Box<Expr>,

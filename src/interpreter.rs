@@ -1,6 +1,6 @@
 use crate::{
     ast::{Expr, ExprKind, Stmt},
-    class::LoxClass,
+    class::{LoxClass, LoxInstance},
     clock::Clock,
     function::LoxFunction,
     token::{Token, TokenType},
@@ -320,7 +320,7 @@ impl Interpreter {
             }
             ExprKind::Get { object, name } => {
                 if let Value::Instance(instance) = self.evaluate(*object)? {
-                    instance.borrow().get(&name)
+                    LoxInstance::get(instance, &name)
                 } else {
                     Err(Error::Runtime {
                         message: "Only instances have properties.".to_string(),
@@ -345,6 +345,7 @@ impl Interpreter {
                     })
                 }
             }
+            ExprKind::This(ref keyword) => self.lookup_variable(keyword, &expr),
         }
     }
 

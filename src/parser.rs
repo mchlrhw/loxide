@@ -137,6 +137,8 @@ impl Parser {
                     .clone()
                     .expect("must have a literal"),
             )))
+        } else if self.is_match(&[TokenType::This]) {
+            Ok(Expr::new(This(self.previous())))
         } else if self.is_match(&[TokenType::Identifier]) {
             Ok(Expr::new(Variable(self.previous())))
         } else if self.is_match(&[TokenType::LeftParen]) {

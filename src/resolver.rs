@@ -106,6 +106,9 @@ impl<'r> Resolver<'r> {
                 self.resolve_expr(*value);
                 self.resolve_expr(*object);
             }
+            ExprKind::This(keyword) => {
+                self.resolve_local(expr_clone, &keyword);
+            }
             ExprKind::Unary { right, .. } => {
                 self.resolve_expr(*right);
             }
@@ -149,6 +152,11 @@ impl<'r> Resolver<'r> {
                 self.declare(&name);
                 self.define(&name);
 
+                self.begin_scope();
+                if let Some(scope) = self.scopes.last_mut() {
+                    scope.insert("this".to_string(), true);
+                }
+
                 for method in methods {
                     if let Stmt::Function { params, body, .. } = method {
                         let declaration = FunKind::Method;
@@ -157,6 +165,8 @@ impl<'r> Resolver<'r> {
                         panic!("Cannot resolve '{method:?}' as Stmt::Function");
                     }
                 }
+
+                self.end_scope();
             }
             Stmt::Expression(expr) => {
                 self.resolve_expr(expr);

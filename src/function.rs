@@ -1,6 +1,7 @@
 use crate::{
     ast::Stmt,
     callable::Callable,
+    class::LoxInstance,
     interpreter::{Environment, Error, Interpreter},
     token::Token,
     value::Value,
@@ -32,6 +33,15 @@ impl LoxFunction {
 
     pub fn value(self) -> Value {
         Value::Callable(Box::new(self))
+    }
+
+    pub fn bind(self, instance: Rc<RefCell<LoxInstance>>) -> Self {
+        let environment = Environment::wrap(self.closure);
+        environment
+            .borrow_mut()
+            .define("this", &Value::Instance(instance));
+
+        LoxFunction::new(self.name, self.params, self.body, environment)
     }
 }
 
