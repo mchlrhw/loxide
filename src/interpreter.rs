@@ -426,7 +426,32 @@ impl Interpreter {
 
                 return Err(Error::Return { value });
             }
-            Stmt::Class { name, methods } => {
+            Stmt::Class {
+                name,
+                superclass,
+                methods,
+            } => {
+                let mut sc = None;
+
+                if let Some(superclass) = superclass {
+                    let value = self.evaluate(superclass)?;
+                    if let Value::Callable(ref callable) = value {
+                        if let Some(class) = callable.as_any().downcast_ref::<LoxClass>().cloned() {
+                            sc = Some(Box::new(class));
+                        } else {
+                            return Err(Error::Runtime {
+                                message: "Superclass must be a class".to_string(),
+                                line: name.line(),
+                            });
+                        }
+                    } else {
+                        return Err(Error::Runtime {
+                            message: "Superclass must be a class".to_string(),
+                            line: name.line(),
+                        });
+                    }
+                }
+
                 {
                     self.environment
                         .borrow_mut()
@@ -447,7 +472,8 @@ impl Interpreter {
                     }
                 }
 
-                let class = LoxClass::new(name.lexeme(), functions).value();
+                let class = LoxClass::new(name.lexeme(), sc, functions).value();
+
                 self.environment.borrow_mut().assign(&name, &class)?;
             }
         }

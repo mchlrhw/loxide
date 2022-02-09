@@ -162,12 +162,30 @@ impl<'r> Resolver<'r> {
                 self.resolve_statements(statements);
                 self.end_scope();
             }
-            Stmt::Class { name, methods } => {
+            Stmt::Class {
+                name,
+                superclass,
+                methods,
+            } => {
                 let enclosing_class = self.current_class;
                 self.current_class = ClassKind::Class;
 
                 self.declare(&name);
                 self.define(&name);
+
+                if let Some(superclass) = superclass {
+                    if let Expr {
+                        kind: ExprKind::Variable(ref superclass_name),
+                        ..
+                    } = superclass
+                    {
+                        if name.lexeme() == superclass_name.lexeme() {
+                            error(superclass_name.line(), "A class can't inherit from itself.");
+                            self.had_error = true;
+                        }
+                        self.resolve_expr(superclass);
+                    }
+                }
 
                 self.begin_scope();
                 if let Some(scope) = self.scopes.last_mut() {

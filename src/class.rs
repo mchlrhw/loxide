@@ -5,18 +5,24 @@ use crate::{
     token::Token,
     value::Value,
 };
-use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc};
+use std::{any::Any, cell::RefCell, collections::HashMap, fmt, rc::Rc};
 
 #[derive(Clone, Debug)]
 pub struct LoxClass {
     name: String,
+    superclass: Option<Box<LoxClass>>,
     methods: HashMap<String, LoxFunction>,
 }
 
 impl LoxClass {
-    pub fn new(name: &str, methods: HashMap<String, LoxFunction>) -> Self {
+    pub fn new(
+        name: &str,
+        superclass: Option<Box<LoxClass>>,
+        methods: HashMap<String, LoxFunction>,
+    ) -> Self {
         Self {
             name: name.to_string(),
+            superclass,
             methods,
         }
     }
@@ -26,7 +32,15 @@ impl LoxClass {
     }
 
     pub fn find_method(&self, name: &str) -> Option<LoxFunction> {
-        self.methods.get(name).cloned()
+        let method = self.methods.get(name).cloned();
+
+        if method.is_some() {
+            method
+        } else if let Some(superclass) = &self.superclass {
+            superclass.find_method(name)
+        } else {
+            None
+        }
     }
 }
 
@@ -58,6 +72,10 @@ impl Callable for LoxClass {
 
     fn box_clone(&self) -> Box<dyn Callable> {
         Box::new((*self).clone())
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 

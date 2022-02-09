@@ -4,6 +4,7 @@ use crate::{
     value::Value,
 };
 use std::{
+    any::Any,
     fmt,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -39,5 +40,9 @@ impl Callable for Clock {
 
     fn box_clone(&self) -> Box<dyn Callable> {
         Box::new((*self).clone())
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }

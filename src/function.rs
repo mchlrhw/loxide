@@ -6,7 +6,7 @@ use crate::{
     token::{Token, TokenType},
     value::Value,
 };
-use std::{cell::RefCell, fmt, rc::Rc};
+use std::{any::Any, cell::RefCell, fmt, rc::Rc};
 
 #[derive(Clone, Debug)]
 pub struct LoxFunction {
@@ -100,5 +100,9 @@ impl Callable for LoxFunction {
 
     fn box_clone(&self) -> Box<dyn Callable> {
         Box::new((*self).clone())
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }

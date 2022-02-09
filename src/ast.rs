@@ -75,6 +75,7 @@ pub enum Stmt {
     Block(Vec<Stmt>),
     Class {
         name: Token,
+        superclass: Option<Expr>,
         methods: Vec<Stmt>,
     },
     Expression(Expr),
