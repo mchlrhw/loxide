@@ -38,13 +38,22 @@ impl fmt::Display for LoxClass {
 
 impl Callable for LoxClass {
     fn arity(&self) -> usize {
-        0
+        if let Some(initializer) = self.find_method("init") {
+            initializer.arity()
+        } else {
+            0
+        }
     }
 
-    fn call(&self, _interpreter: &mut Interpreter, _arguments: Vec<Value>) -> Result<Value, Error> {
-        let value = LoxInstance::new(self).value();
+    fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Result<Value, Error> {
+        let instance = Rc::new(RefCell::new(LoxInstance::new(self)));
+        if let Some(initializer) = self.find_method("init") {
+            initializer
+                .bind(instance.clone())
+                .call(interpreter, arguments)?;
+        }
 
-        Ok(value)
+        Ok(Value::Instance(instance))
     }
 
     fn box_clone(&self) -> Box<dyn Callable> {
