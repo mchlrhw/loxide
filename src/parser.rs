@@ -137,6 +137,12 @@ impl Parser {
                     .clone()
                     .expect("must have a literal"),
             )))
+        } else if self.is_match(&[TokenType::Super]) {
+            let keyword = self.previous();
+            self.consume(TokenType::Dot, "Expect '.' after 'super'.")?;
+            let method = self.consume(TokenType::Identifier, "Expect superclass method name.")?;
+
+            Ok(Expr::new(Super { keyword, method }))
         } else if self.is_match(&[TokenType::This]) {
             Ok(Expr::new(This(self.previous())))
         } else if self.is_match(&[TokenType::Identifier]) {

@@ -8,16 +8,17 @@ use std::collections::HashMap;
 
 #[derive(Clone, Copy)]
 enum FunKind {
-    None,
     Function,
     Initializer,
     Method,
+    None,
 }
 
 #[derive(Clone, Copy)]
 enum ClassKind {
-    None,
     Class,
+    None,
+    Subclass,
 }
 
 pub struct Resolver<'r> {
@@ -115,6 +116,22 @@ impl<'r> Resolver<'r> {
                 self.resolve_expr(*value);
                 self.resolve_expr(*object);
             }
+            ExprKind::Super { keyword, .. } => match self.current_class {
+                ClassKind::None => {
+                    error(keyword.line(), "Can't use 'super' outside of a class.");
+                    self.had_error = true;
+                }
+                ClassKind::Class => {
+                    error(
+                        keyword.line(),
+                        "Can't use 'super' in a class with no superclass.",
+                    );
+                    self.had_error = true;
+                }
+                ClassKind::Subclass => {
+                    self.resolve_local(expr_clone, &keyword);
+                }
+            },
             ExprKind::This(keyword) => {
                 if matches!(self.current_class, ClassKind::None) {
                     error(keyword.line(), "Can't use 'this' outside of a class.");
@@ -173,7 +190,9 @@ impl<'r> Resolver<'r> {
                 self.declare(&name);
                 self.define(&name);
 
+                let has_superclass = superclass.is_some();
                 if let Some(superclass) = superclass {
+                    self.current_class = ClassKind::Subclass;
                     if let Expr {
                         kind: ExprKind::Variable(ref superclass_name),
                         ..
@@ -184,6 +203,11 @@ impl<'r> Resolver<'r> {
                             self.had_error = true;
                         }
                         self.resolve_expr(superclass);
+                    }
+
+                    self.begin_scope();
+                    if let Some(scope) = self.scopes.last_mut() {
+                        scope.insert("super".to_string(), true);
                     }
                 }
 
@@ -206,6 +230,11 @@ impl<'r> Resolver<'r> {
                 }
 
                 self.end_scope();
+
+                if has_superclass {
+                    self.end_scope();
+                }
+
                 self.current_class = enclosing_class;
             }
             Stmt::Expression(expr) => {

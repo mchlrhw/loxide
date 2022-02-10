@@ -346,6 +346,42 @@ impl Interpreter {
                 }
             }
             ExprKind::This(ref keyword) => self.lookup_variable(keyword, &expr),
+            ExprKind::Super { ref method, .. } => {
+                let distance = self.locals.get(&expr).expect("must have super in locals");
+
+                let superclass = {
+                    self.environment
+                        .borrow()
+                        .get_at(*distance, &Token::new(TokenType::Super, "super", None, 42))?
+                };
+
+                let object = {
+                    self.environment.borrow().get_at(
+                        distance - 1,
+                        &Token::new(TokenType::Super, "this", None, 42),
+                    )?
+                };
+
+                if let Value::Callable(callable) = superclass {
+                    if let Some(class) = callable.as_any().downcast_ref::<LoxClass>() {
+                        let name = method.lexeme();
+                        let method = class.find_method(name).ok_or(Error::Runtime {
+                            message: format!("Undefined property '{name}'."),
+                            line: method.line(),
+                        })?;
+
+                        if let Value::Instance(object) = object {
+                            return Ok(method.bind(object).value());
+                        }
+
+                        panic!("object must be an instance");
+                    }
+
+                    panic!("superclass must be a class");
+                }
+
+                panic!("superclass must be a callable");
+            }
         }
     }
 
@@ -458,6 +494,13 @@ impl Interpreter {
                         .define(name.lexeme(), &Value::Nil);
                 }
 
+                if let Some(ref superclass) = &sc {
+                    self.environment = Environment::wrap(self.environment.clone());
+                    self.environment
+                        .borrow_mut()
+                        .define("super", &superclass.clone().value());
+                }
+
                 let mut functions = HashMap::new();
                 for method in methods {
                     if let Stmt::Function { name, params, body } = method {
@@ -470,6 +513,11 @@ impl Interpreter {
                         );
                         functions.insert(name.lexeme().to_string(), function);
                     }
+                }
+
+                if sc.is_some() {
+                    let enclosing = { self.environment.borrow().ancestor(0) };
+                    self.environment = enclosing;
                 }
 
                 let class = LoxClass::new(name.lexeme(), sc, functions).value();
