@@ -1,4 +1,5 @@
 use crate::{
+    error_line,
     token::{Token, TokenType},
     value::Value,
 };
@@ -94,7 +95,7 @@ impl<'a> Scanner<'a> {
         }
 
         if self.is_at_end() {
-            crate::error(self.line, "Unterminated string.");
+            error_line(self.line, "Unterminated string.");
             return;
         }
 
@@ -213,7 +214,7 @@ impl<'a> Scanner<'a> {
             '"' => self.string(),
             c if c.is_digit(10) => self.number(),
             c if c == '_' || c.is_alphabetic() => self.identifier(),
-            _ => crate::error(self.line, "Unexpected character."),
+            _ => error_line(self.line, "Unexpected character."),
         }
     }
 

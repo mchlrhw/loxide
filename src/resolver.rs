@@ -1,6 +1,6 @@
 use crate::{
     ast::{Expr, ExprKind, Stmt},
-    error,
+    error_token,
     interpreter::Interpreter,
     token::Token,
 };
@@ -57,10 +57,7 @@ impl<'r> Resolver<'r> {
     fn declare(&mut self, name: &Token) {
         if let Some(scope) = self.scopes.last_mut() {
             if scope.contains_key(name.lexeme()) {
-                error(
-                    name.line(),
-                    "Already a variable with this name in this scope.",
-                );
+                error_token(name, "Already a variable with this name in this scope.");
                 self.had_error = true;
             }
             scope.insert(name.lexeme().to_string(), false);
@@ -118,14 +115,11 @@ impl<'r> Resolver<'r> {
             }
             ExprKind::Super { keyword, .. } => match self.current_class {
                 ClassKind::None => {
-                    error(keyword.line(), "Can't use 'super' outside of a class.");
+                    error_token(&keyword, "Can't use 'super' outside of a class.");
                     self.had_error = true;
                 }
                 ClassKind::Class => {
-                    error(
-                        keyword.line(),
-                        "Can't use 'super' in a class with no superclass.",
-                    );
+                    error_token(&keyword, "Can't use 'super' in a class with no superclass.");
                     self.had_error = true;
                 }
                 ClassKind::Subclass => {
@@ -134,7 +128,7 @@ impl<'r> Resolver<'r> {
             },
             ExprKind::This(keyword) => {
                 if matches!(self.current_class, ClassKind::None) {
-                    error(keyword.line(), "Can't use 'this' outside of a class.");
+                    error_token(&keyword, "Can't use 'this' outside of a class.");
                     self.had_error = true;
                 }
 
@@ -146,10 +140,7 @@ impl<'r> Resolver<'r> {
             ExprKind::Variable(name) => {
                 if let Some(scope) = self.scopes.last() {
                     if matches!(scope.get(name.lexeme()), Some(false)) {
-                        error(
-                            name.line(),
-                            "Can't read local variable in its own initializer.",
-                        );
+                        error_token(&name, "Can't read local variable in its own initializer.");
                         self.had_error = true;
                     }
                 }
@@ -199,7 +190,7 @@ impl<'r> Resolver<'r> {
                     } = superclass
                     {
                         if name.lexeme() == superclass_name.lexeme() {
-                            error(superclass_name.line(), "A class can't inherit from itself.");
+                            error_token(superclass_name, "A class can't inherit from itself.");
                             self.had_error = true;
                         }
                         self.resolve_expr(superclass);
@@ -261,13 +252,13 @@ impl<'r> Resolver<'r> {
             }
             Stmt::Return { value, keyword } => {
                 if matches!(self.current_function, FunKind::None) {
-                    error(keyword.line(), "Can't return from top-level code.");
+                    error_token(&keyword, "Can't return from top-level code.");
                     self.had_error = true;
                 }
 
                 if let Some(value) = value {
                     if matches!(self.current_function, FunKind::Initializer) {
-                        error(keyword.line(), "Can't return a value from an initializer.");
+                        error_token(&keyword, "Can't return a value from an initializer.");
                         self.had_error = true;
                     }
 

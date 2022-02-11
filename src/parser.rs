@@ -165,6 +165,7 @@ impl Parser {
             loop {
                 if arguments.len() >= 255 {
                     self.error(self.peek(), "Can't have more than 255 arguments.");
+                    self.errors.push(Error::ParseError);
                 }
 
                 arguments.push(self.expression()?);
@@ -544,7 +545,7 @@ impl Parser {
         if !self.check(TokenType::RightParen) {
             loop {
                 if params.len() >= 255 {
-                    self.error(self.peek(), "Can't have more than 255 parameters");
+                    self.error(self.peek(), "Can't have more than 255 parameters.");
                 }
                 params.push(self.consume(TokenType::Identifier, "Expect parameter name.")?);
                 if !self.is_match(&[TokenType::Comma]) {

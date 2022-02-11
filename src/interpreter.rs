@@ -128,7 +128,7 @@ fn check_number_operands(operator: Token, left: Value, right: Value) -> Result<(
         Ok((left_n, right_n))
     } else {
         Err(Error::Runtime {
-            message: "Operands must be a numbers.".to_string(),
+            message: "Operands must be numbers.".to_string(),
             line: operator.line(),
         })
     }
@@ -476,13 +476,13 @@ impl Interpreter {
                             sc = Some(Box::new(class));
                         } else {
                             return Err(Error::Runtime {
-                                message: "Superclass must be a class".to_string(),
+                                message: "Superclass must be a class.".to_string(),
                                 line: name.line(),
                             });
                         }
                     } else {
                         return Err(Error::Runtime {
-                            message: "Superclass must be a class".to_string(),
+                            message: "Superclass must be a class.".to_string(),
                             line: name.line(),
                         });
                     }
