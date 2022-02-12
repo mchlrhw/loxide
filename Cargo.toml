@@ -1,15 +1,5 @@
-[package]
-name = "lox"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-[dependencies]
-anyhow = "1.0.51"
-itertools = "0.10.3"
-once_cell = "1.9.0"
-thiserror = "1.0.30"
-uuid = { version = "0.8.2", features = ["v4"] }
-
-[dev-dependencies]
-regex = "1.5.4"
-simple_test_case = { git = "https://github.com/sminez/simple_test_case.git" }
+members = [
+    "treewalk",
+]

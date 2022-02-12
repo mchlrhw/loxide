@@ -1,9 +1,5 @@
 use simple_test_case::dir_cases;
-use std::{
-    env,
-    path::{Path, PathBuf},
-    process::Command,
-};
+use std::{env, process::Command};
 
 macro_rules! regex {
     ($re:literal $(,)?) => {{
@@ -60,7 +56,8 @@ fn extract_expected_data(line_num: usize, line: &str) -> Option<String> {
     None
 }
 
-fn run_test(bin_path: &Path, source_file: &str, source: &str) -> anyhow::Result<()> {
+fn run_test(bin_path: &str, source_file: &str, source: &str) -> anyhow::Result<()> {
+    println!("{bin_path:?}");
     let mut expected = String::new();
     for (line_idx, line) in source.lines().enumerate() {
         let line_num = line_idx + 1;
@@ -69,7 +66,9 @@ fn run_test(bin_path: &Path, source_file: &str, source: &str) -> anyhow::Result<
         }
     }
 
-    let output = Command::new(bin_path).arg(source_file).output()?;
+    let output = Command::new(bin_path)
+        .arg(&format!("../{source_file}"))
+        .output()?;
 
     let output = String::from_utf8(output.stdout)?;
     assert_eq!(output, expected);
@@ -116,12 +115,9 @@ fn crafting_interpreters_test_suite(path: &str, contents: &str) -> anyhow::Resul
         return Ok(());
     }
 
-    let root_dir = env::var("CARGO_MANIFEST_DIR")?;
-    let pkg_name = env::var("CARGO_PKG_NAME")?;
-
-    let mut bin_path = PathBuf::from(root_dir);
-    bin_path.push("target/debug");
-    bin_path.push(pkg_name);
+    let name = env::var("CARGO_PKG_NAME")?;
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR")?;
+    let bin_path = format!("{manifest_dir}/../target/debug/{name}");
 
     run_test(&bin_path, path, contents)
 }

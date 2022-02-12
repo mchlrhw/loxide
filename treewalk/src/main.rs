@@ -1,4 +1,6 @@
-use lox::{interpreter::Interpreter, parser::Parser, resolver::Resolver, scanner::Scanner};
+use lox_treewalk::{
+    interpreter::Interpreter, parser::Parser, resolver::Resolver, scanner::Scanner,
+};
 use std::{env, io::Write, process};
 
 fn run(interpreter: &mut Interpreter, source: &str) {
