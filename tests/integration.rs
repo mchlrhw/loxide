@@ -1,9 +1,9 @@
+use simple_test_case::dir_cases;
 use std::{
-    env, fs,
+    env,
     path::{Path, PathBuf},
     process::Command,
 };
-use walkdir::WalkDir;
 
 macro_rules! regex {
     ($re:literal $(,)?) => {{
@@ -60,10 +60,7 @@ fn extract_expected_data(line_num: usize, line: &str) -> Option<String> {
     None
 }
 
-fn run_test(bin_path: &Path, source_file: &Path) -> anyhow::Result<()> {
-    println!("{source_file:?}");
-    let source = fs::read_to_string(source_file)?;
-
+fn run_test(bin_path: &Path, source_file: &str, source: &str) -> anyhow::Result<()> {
     let mut expected = String::new();
     for (line_idx, line) in source.lines().enumerate() {
         let line_num = line_idx + 1;
@@ -80,8 +77,45 @@ fn run_test(bin_path: &Path, source_file: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
+#[dir_cases(
+    "resources/test",
+    "resources/test/assignment",
+    "resources/test/block",
+    "resources/test/bool",
+    "resources/test/call",
+    "resources/test/class",
+    "resources/test/closure",
+    "resources/test/comments",
+    "resources/test/constructor",
+    "resources/test/field",
+    "resources/test/for",
+    "resources/test/function",
+    "resources/test/if",
+    "resources/test/inheritance",
+    "resources/test/logical_operator",
+    "resources/test/method",
+    "resources/test/nil",
+    "resources/test/number",
+    "resources/test/operator",
+    "resources/test/print",
+    "resources/test/regression",
+    "resources/test/return",
+    "resources/test/string",
+    "resources/test/super",
+    "resources/test/this",
+    "resources/test/variable",
+    "resources/test/while"
+)]
 #[test]
-fn crafting_interpreters_test_suite() -> anyhow::Result<()> {
+fn crafting_interpreters_test_suite(path: &str, contents: &str) -> anyhow::Result<()> {
+    // FIXME: The following tests should pass, but don't, so are skipped.
+    if path.ends_with("decimal_point_at_eof.lox")
+        || path.ends_with("equals_class.lox")
+        || path.ends_with("equals_method.lox")
+    {
+        return Ok(());
+    }
+
     let root_dir = env::var("CARGO_MANIFEST_DIR")?;
     let pkg_name = env::var("CARGO_PKG_NAME")?;
 
@@ -89,30 +123,5 @@ fn crafting_interpreters_test_suite() -> anyhow::Result<()> {
     bin_path.push("target/debug");
     bin_path.push(pkg_name);
 
-    for source_file in WalkDir::new("resources/test")
-        .into_iter()
-        .filter_map(|path| path.ok())
-    {
-        if source_file.metadata()?.is_file() {
-            let path = source_file.path();
-            let path_str = path.to_str().expect("must be string");
-            if !path_str.starts_with("resources/test/benchmark")
-                && !path_str.starts_with("resources/test/expressions")
-                && !path_str.starts_with("resources/test/limit")
-                && !path_str.starts_with("resources/test/scanning")
-                // FIXME: This is only ignored because the impl is incomplete.
-                && !path_str.starts_with("resources/test/operator/equals_class.lox")
-                // FIXME: Ditto.
-                && !path_str.starts_with("resources/test/operator/equals_method.lox")
-                // FIXME: Not sure about this one.
-                && !path_str.starts_with("resources/test/field/set_evaluation_order.lox")
-                // FIXME: Or this one.
-                && !path_str.starts_with("resources/test/number/decimal_point_at_eof.lox")
-            {
-                run_test(&bin_path, path)?
-            }
-        }
-    }
-
-    Ok(())
+    run_test(&bin_path, path, contents)
 }

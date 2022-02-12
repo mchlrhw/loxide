@@ -12,4 +12,4 @@ uuid = { version = "0.8.2", features = ["v4"] }
 
 [dev-dependencies]
 regex = "1.5.4"
-walkdir = "2.3.2"
+simple_test_case = { git = "https://github.com/sminez/simple_test_case.git" }
