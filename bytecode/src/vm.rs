@@ -16,6 +16,7 @@ type Result<T> = std::result::Result<T, Error>;
 #[derive(Default)]
 pub struct Vm {
     ip: usize,
+    stack: Vec<Value>,
 }
 
 impl Vm {
@@ -51,13 +52,26 @@ impl Vm {
             let op = OpCode::try_from(instruction).map_err(|_| Error::Runtime)?;
 
             #[cfg(feature = "trace_execution")]
-            op.disassemble(&chunk, offset);
+            {
+                print!("          ");
+                for value in &self.stack {
+                    print!("[{value}]");
+                }
+                println!();
+                op.disassemble(&chunk, offset);
+            }
 
             match op {
-                OpCode::Return => return Ok(()),
+                OpCode::Return => {
+                    if let Some(value) = self.stack.pop() {
+                        println!("{value}");
+                    }
+
+                    return Ok(());
+                }
                 OpCode::Constant => {
                     let constant = self.read_constant(&chunk);
-                    println!("{constant}");
+                    self.stack.push(constant.clone());
                 }
             }
         }
