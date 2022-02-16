@@ -1,3 +1,4 @@
+use crate::value::Value;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use std::fmt;
 
@@ -26,7 +27,7 @@ impl fmt::Display for OpCode {
 }
 
 impl OpCode {
-    fn disassemble(&self, chunk: &Chunk, offset: usize) -> usize {
+    pub fn disassemble(&self, chunk: &Chunk, offset: usize) -> usize {
         print!("{offset:04} ");
 
         if offset > 0 && chunk.lines[offset] == chunk.lines[offset - 1] {
@@ -40,7 +41,7 @@ impl OpCode {
             Self::Constant => {
                 let constant = chunk.code[offset + 1];
                 print!("{self:-16} {constant:4} ");
-                let value = chunk.constants[constant as usize];
+                let value = &chunk.constants[constant as usize];
                 println!("{value}");
 
                 offset + 2
@@ -57,7 +58,7 @@ impl OpCode {
 #[derive(Default)]
 pub struct Chunk {
     code: Vec<u8>,
-    constants: Vec<f64>,
+    constants: Vec<Value>,
     lines: Vec<usize>,
 }
 
@@ -66,12 +67,20 @@ impl Chunk {
         Self::default()
     }
 
+    pub fn code(&self) -> &[u8] {
+        &self.code
+    }
+
+    pub fn constants(&self) -> &[Value] {
+        &self.constants
+    }
+
     pub fn write<B: Into<u8>>(&mut self, byte: B, line: usize) {
         self.code.push(byte.into());
         self.lines.push(line);
     }
 
-    pub fn add_constant(&mut self, constant: f64) -> u8 {
+    pub fn add_constant(&mut self, constant: Value) -> u8 {
         self.constants.push(constant);
 
         (self.constants.len() - 1) as u8

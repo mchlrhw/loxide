@@ -1,15 +1,20 @@
-use lox_bytecode::chunk::{Chunk, OpCode};
+use lox_bytecode::{
+    chunk::{Chunk, OpCode},
+    value::Value,
+    vm::Vm,
+};
 
 fn main() -> anyhow::Result<()> {
-    let mut chunk = Chunk::new();
+    let mut vm = Vm::new();
 
-    let constant = chunk.add_constant(1.2);
+    let mut chunk = Chunk::new();
+    let constant = chunk.add_constant(Value::Number(1.2));
+
     chunk.write(OpCode::Constant, 123);
     chunk.write(constant, 123);
-
     chunk.write(OpCode::Return, 123);
 
-    chunk.disassemble("test chunk")?;
+    vm.interpret(chunk)?;
 
     Ok(())
 }
