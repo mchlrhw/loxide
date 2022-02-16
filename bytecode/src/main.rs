@@ -12,6 +12,7 @@ fn main() -> anyhow::Result<()> {
 
     chunk.write(OpCode::Constant, 123);
     chunk.write(constant, 123);
+    chunk.write(OpCode::Negate, 123);
     chunk.write(OpCode::Return, 123);
 
     vm.interpret(chunk)?;

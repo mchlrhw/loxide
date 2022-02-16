@@ -62,16 +62,20 @@ impl Vm {
             }
 
             match op {
+                OpCode::Constant => {
+                    let constant = self.read_constant(&chunk);
+                    self.stack.push(constant.clone());
+                }
+                OpCode::Negate => {
+                    let value = self.stack.pop().expect("stack must have values");
+                    self.stack.push(-value);
+                }
                 OpCode::Return => {
                     if let Some(value) = self.stack.pop() {
                         println!("{value}");
                     }
 
                     return Ok(());
-                }
-                OpCode::Constant => {
-                    let constant = self.read_constant(&chunk);
-                    self.stack.push(constant.clone());
                 }
             }
         }

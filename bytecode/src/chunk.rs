@@ -14,6 +14,7 @@ type Result<T> = std::result::Result<T, Error>;
 #[repr(u8)]
 pub enum OpCode {
     Constant = 0,
+    Negate,
     Return,
 }
 
@@ -21,6 +22,7 @@ impl fmt::Display for OpCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Constant => write!(f, "OP_CONSTANT"),
+            Self::Negate => write!(f, "OP_NEGATE"),
             Self::Return => write!(f, "OP_RETURN"),
         }
     }
@@ -37,6 +39,12 @@ impl OpCode {
             print!("{line:4} ");
         }
 
+        fn simple_intruction(op: &OpCode, offset: usize) -> usize {
+            println!("{op}");
+
+            offset + 1
+        }
+
         match self {
             Self::Constant => {
                 let constant = chunk.code[offset + 1];
@@ -46,11 +54,8 @@ impl OpCode {
 
                 offset + 2
             }
-            Self::Return => {
-                println!("{self}");
-
-                offset + 1
-            }
+            Self::Negate => simple_intruction(self, offset),
+            Self::Return => simple_intruction(self, offset),
         }
     }
 }
