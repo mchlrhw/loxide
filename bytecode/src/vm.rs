@@ -61,10 +61,30 @@ impl Vm {
                 op.disassemble(&chunk, offset);
             }
 
+            macro_rules! binary_op {
+                ($op:tt) => {
+                    let b = self.stack.pop().expect("stack mut have values");
+                    let a = self.stack.pop().expect("stack mut have values");
+                    self.stack.push(a $op b);
+                }
+            }
+
             match op {
                 OpCode::Constant => {
                     let constant = self.read_constant(&chunk);
                     self.stack.push(constant.clone());
+                }
+                OpCode::Add => {
+                    binary_op!(+);
+                }
+                OpCode::Subtract => {
+                    binary_op!(-);
+                }
+                OpCode::Multiply => {
+                    binary_op!(*);
+                }
+                OpCode::Divide => {
+                    binary_op!(/);
                 }
                 OpCode::Negate => {
                     let value = self.stack.pop().expect("stack must have values");

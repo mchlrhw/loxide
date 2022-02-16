@@ -14,6 +14,10 @@ type Result<T> = std::result::Result<T, Error>;
 #[repr(u8)]
 pub enum OpCode {
     Constant = 0,
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
     Negate,
     Return,
 }
@@ -22,6 +26,10 @@ impl fmt::Display for OpCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Constant => write!(f, "OP_CONSTANT"),
+            Self::Add => write!(f, "OP_ADD"),
+            Self::Subtract => write!(f, "OP_SUBTRACT"),
+            Self::Multiply => write!(f, "OP_MULTIPLY"),
+            Self::Divide => write!(f, "OP_DIVIDE"),
             Self::Negate => write!(f, "OP_NEGATE"),
             Self::Return => write!(f, "OP_RETURN"),
         }
@@ -54,6 +62,10 @@ impl OpCode {
 
                 offset + 2
             }
+            Self::Add => simple_intruction(self, offset),
+            Self::Subtract => simple_intruction(self, offset),
+            Self::Multiply => simple_intruction(self, offset),
+            Self::Divide => simple_intruction(self, offset),
             Self::Negate => simple_intruction(self, offset),
             Self::Return => simple_intruction(self, offset),
         }
