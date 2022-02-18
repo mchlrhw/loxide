@@ -1,3 +1,5 @@
-pub mod chunk;
-pub mod value;
+mod chunk;
+mod compiler;
+mod scanner;
+mod value;
 pub mod vm;

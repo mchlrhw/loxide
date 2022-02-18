@@ -1,34 +1,40 @@
-use lox_bytecode::{
-    chunk::{Chunk, OpCode},
-    value::Value,
-    vm::Vm,
-};
+use lox_bytecode::vm::interpret;
+use std::{env, io::Write, process};
 
-fn main() -> anyhow::Result<()> {
-    let mut vm = Vm::new();
+fn repl() -> anyhow::Result<()> {
+    loop {
+        print!("> ");
+        std::io::stdout().flush()?;
 
-    let mut chunk = Chunk::new();
+        let mut line = String::new();
+        std::io::stdin().read_line(&mut line)?;
+        if line.is_empty() {
+            break;
+        }
 
-    let mut constant = chunk.add_constant(Value::Number(1.2));
-    chunk.write(OpCode::Constant, 123);
-    chunk.write(constant, 123);
-
-    constant = chunk.add_constant(Value::Number(3.4));
-    chunk.write(OpCode::Constant, 123);
-    chunk.write(constant, 123);
-
-    chunk.write(OpCode::Add, 123);
-
-    constant = chunk.add_constant(Value::Number(5.6));
-    chunk.write(OpCode::Constant, 123);
-    chunk.write(constant, 123);
-
-    chunk.write(OpCode::Divide, 123);
-    chunk.write(OpCode::Negate, 123);
-
-    chunk.write(OpCode::Return, 123);
-
-    vm.interpret(chunk)?;
+        let _ = interpret(&line);
+    }
 
     Ok(())
+}
+
+fn run_file(path: &str) -> anyhow::Result<()> {
+    let source = std::fs::read_to_string(path)?;
+
+    interpret(&source)?;
+
+    Ok(())
+}
+
+fn main() -> anyhow::Result<()> {
+    let args = env::args().skip(1).collect::<Vec<_>>();
+
+    match args.len() {
+        0 => repl(),
+        1 => run_file(&args[0]),
+        _ => {
+            println!("Usage: lox [script]");
+            process::exit(1);
+        }
+    }
 }

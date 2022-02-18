@@ -1,5 +1,6 @@
 use crate::{
     chunk::{Chunk, OpCode},
+    compiler::compile,
     value::Value,
 };
 
@@ -106,4 +107,10 @@ impl Vm {
 
         self.run(chunk)
     }
+}
+
+pub fn interpret(source: &str) -> Result<()> {
+    compile(source);
+
+    Ok(())
 }
