@@ -102,15 +102,15 @@ impl Vm {
         }
     }
 
-    pub fn interpret(&mut self, chunk: Chunk) -> Result<()> {
+    pub fn interpret(&mut self, source: &str) -> Result<()> {
+        let mut chunk = Chunk::new();
+
+        if !compile(source, &mut chunk) {
+            return Err(Error::Compile);
+        }
+
         self.ip = 0;
 
         self.run(chunk)
     }
-}
-
-pub fn interpret(source: &str) -> Result<()> {
-    compile(source);
-
-    Ok(())
 }

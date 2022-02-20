@@ -1,7 +1,7 @@
 use itertools::{peek_nth, PeekNth};
 use std::{fmt, str::Chars};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen,
@@ -81,6 +81,7 @@ fn identifier_type(lexeme: &str) -> TokenType {
     }
 }
 
+#[derive(Debug)]
 pub struct Token {
     pub typ: TokenType,
     pub lexeme: String,

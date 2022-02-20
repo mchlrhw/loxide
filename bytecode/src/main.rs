@@ -1,7 +1,7 @@
-use lox_bytecode::vm::interpret;
+use lox_bytecode::vm::Vm;
 use std::{env, io::Write, process};
 
-fn repl() -> anyhow::Result<()> {
+fn repl(vm: &mut Vm) -> anyhow::Result<()> {
     loop {
         print!("> ");
         std::io::stdout().flush()?;
@@ -12,26 +12,27 @@ fn repl() -> anyhow::Result<()> {
             break;
         }
 
-        let _ = interpret(&line);
+        let _ = vm.interpret(&line);
     }
 
     Ok(())
 }
 
-fn run_file(path: &str) -> anyhow::Result<()> {
+fn run_file(path: &str, vm: &mut Vm) -> anyhow::Result<()> {
     let source = std::fs::read_to_string(path)?;
 
-    interpret(&source)?;
+    vm.interpret(&source)?;
 
     Ok(())
 }
 
 fn main() -> anyhow::Result<()> {
     let args = env::args().skip(1).collect::<Vec<_>>();
+    let mut vm = Vm::new();
 
     match args.len() {
-        0 => repl(),
-        1 => run_file(&args[0]),
+        0 => repl(&mut vm),
+        1 => run_file(&args[0], &mut vm),
         _ => {
             println!("Usage: lox [script]");
             process::exit(1);
