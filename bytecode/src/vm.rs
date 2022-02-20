@@ -117,7 +117,9 @@ impl Vm {
                     self.stack.push(Value::Boolean(false));
                 }
                 OpCode::Equal => {
-                    cmp_op!(==);
+                    let b = self.stack.pop().expect("stack mut have values");
+                    let a = self.stack.pop().expect("stack mut have values");
+                    self.stack.push(Value::Boolean(a == b));
                 }
                 OpCode::Greater => {
                     cmp_op!(>);
