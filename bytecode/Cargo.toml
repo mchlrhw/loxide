@@ -10,4 +10,5 @@ num_enum = "0.5.6"
 thiserror = "1.0.30"
 
 [features]
+print_code = []
 trace_execution = []

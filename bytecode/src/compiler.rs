@@ -114,7 +114,7 @@ impl<'p> Parser<'p> {
     }
 
     fn emit_byte<B: Into<u8>>(&self, chunk: &mut Chunk, byte: B) {
-        chunk.write(byte, self.current().line);
+        chunk.write(byte, self.previous().line);
     }
 
     fn emit_bytes<B1: Into<u8>, B2: Into<u8>>(&self, chunk: &mut Chunk, byte1: B1, byte2: B2) {
@@ -128,6 +128,11 @@ impl<'p> Parser<'p> {
 
     fn end_compilation(&self, chunk: &mut Chunk) {
         self.emit_return(chunk);
+
+        #[cfg(feature = "print_code")]
+        if !self.had_error {
+            chunk.disassemble("code").expect("opcodes must be valid");
+        }
     }
 
     // XXX: It was seemingly impossible to move fn(&mut Self, &mut Chunk)
