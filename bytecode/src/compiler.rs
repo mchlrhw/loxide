@@ -159,14 +159,14 @@ impl<'p> Parser<'p> {
             TokenType::Semicolon => (None, None, Precedence::None),
             TokenType::Slash => (None, Some(Self::binary), Precedence::Factor),
             TokenType::Star => (None, Some(Self::binary), Precedence::Factor),
-            TokenType::Bang => (None, None, Precedence::None),
-            TokenType::BangEqual => (None, None, Precedence::None),
+            TokenType::Bang => (Some(Self::unary), None, Precedence::None),
+            TokenType::BangEqual => (None, Some(Self::binary), Precedence::Equality),
             TokenType::Equal => (None, None, Precedence::None),
-            TokenType::EqualEqual => (None, None, Precedence::None),
-            TokenType::Greater => (None, None, Precedence::None),
-            TokenType::GreaterEqual => (None, None, Precedence::None),
-            TokenType::Less => (None, None, Precedence::None),
-            TokenType::LessEqual => (None, None, Precedence::None),
+            TokenType::EqualEqual => (None, Some(Self::binary), Precedence::Equality),
+            TokenType::Greater => (None, Some(Self::binary), Precedence::Comparison),
+            TokenType::GreaterEqual => (None, Some(Self::binary), Precedence::Comparison),
+            TokenType::Less => (None, Some(Self::binary), Precedence::Comparison),
+            TokenType::LessEqual => (None, Some(Self::binary), Precedence::Comparison),
             TokenType::Identifier => (None, None, Precedence::None),
             TokenType::String => (None, None, Precedence::None),
             TokenType::Number => (Some(Self::number), None, Precedence::None),
@@ -198,6 +198,12 @@ impl<'p> Parser<'p> {
         self.parse_precedence(chunk, rule.2 + 1);
 
         match operator_type {
+            TokenType::BangEqual => self.emit_bytes(chunk, OpCode::Equal, OpCode::Not),
+            TokenType::EqualEqual => self.emit_byte(chunk, OpCode::Equal),
+            TokenType::Greater => self.emit_byte(chunk, OpCode::Greater),
+            TokenType::GreaterEqual => self.emit_bytes(chunk, OpCode::Less, OpCode::Not),
+            TokenType::Less => self.emit_byte(chunk, OpCode::Less),
+            TokenType::LessEqual => self.emit_bytes(chunk, OpCode::Greater, OpCode::Not),
             TokenType::Plus => self.emit_byte(chunk, OpCode::Add),
             TokenType::Minus => self.emit_byte(chunk, OpCode::Subtract),
             TokenType::Star => self.emit_byte(chunk, OpCode::Multiply),
@@ -227,8 +233,10 @@ impl<'p> Parser<'p> {
         // Compile the operand.
         self.parse_precedence(chunk, Precedence::Unary);
 
-        if operator_type == &TokenType::Minus {
-            self.emit_byte(chunk, OpCode::Negate);
+        match operator_type {
+            TokenType::Bang => self.emit_byte(chunk, OpCode::Not),
+            TokenType::Minus => self.emit_byte(chunk, OpCode::Negate),
+            _ => {}
         }
     }
 

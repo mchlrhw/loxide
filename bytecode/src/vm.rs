@@ -89,6 +89,19 @@ impl Vm {
                 }
             }
 
+            macro_rules! cmp_op {
+                ($op:tt) => {
+                    if let (Some(Value::Number(_)), Some(Value::Number(_))) = (self.peek(0), self.peek(1)) {
+                        let b = self.stack.pop().expect("stack mut have values");
+                        let a = self.stack.pop().expect("stack mut have values");
+                        self.stack.push(Value::Boolean(a $op b));
+                    } else {
+                        self.runtime_error("Operands must be numbers.", &chunk);
+                        return Err(Error::Runtime);
+                    }
+                }
+            }
+
             match op {
                 OpCode::Constant => {
                     let constant = self.read_constant(&chunk);
@@ -103,6 +116,15 @@ impl Vm {
                 OpCode::False => {
                     self.stack.push(Value::Boolean(false));
                 }
+                OpCode::Equal => {
+                    cmp_op!(==);
+                }
+                OpCode::Greater => {
+                    cmp_op!(>);
+                }
+                OpCode::Less => {
+                    cmp_op!(<);
+                }
                 OpCode::Add => {
                     binary_op!(+);
                 }
@@ -114,6 +136,10 @@ impl Vm {
                 }
                 OpCode::Divide => {
                     binary_op!(/);
+                }
+                OpCode::Not => {
+                    let value = self.stack.pop().expect("stack must have values");
+                    self.stack.push(Value::Boolean(value.is_falsey()));
                 }
                 OpCode::Negate => {
                     if let Some(Value::Number(_)) = self.peek(0) {

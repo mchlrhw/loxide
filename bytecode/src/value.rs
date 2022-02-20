@@ -1,10 +1,20 @@
 use std::{fmt, ops};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub enum Value {
     Boolean(bool),
     Number(f64),
     Nil,
+}
+
+impl Value {
+    pub fn is_falsey(&self) -> bool {
+        match self {
+            Self::Nil => true,
+            Self::Boolean(b) => !b,
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Display for Value {
