@@ -173,17 +173,17 @@ impl<'p> Parser<'p> {
             TokenType::And => (None, None, Precedence::None),
             TokenType::Class => (None, None, Precedence::None),
             TokenType::Else => (None, None, Precedence::None),
-            TokenType::False => (None, None, Precedence::None),
+            TokenType::False => (Some(Self::literal), None, Precedence::None),
             TokenType::For => (None, None, Precedence::None),
             TokenType::Fun => (None, None, Precedence::None),
             TokenType::If => (None, None, Precedence::None),
-            TokenType::Nil => (None, None, Precedence::None),
+            TokenType::Nil => (Some(Self::literal), None, Precedence::None),
             TokenType::Or => (None, None, Precedence::None),
             TokenType::Print => (None, None, Precedence::None),
             TokenType::Return => (None, None, Precedence::None),
             TokenType::Super => (None, None, Precedence::None),
             TokenType::This => (None, None, Precedence::None),
-            TokenType::True => (None, None, Precedence::None),
+            TokenType::True => (Some(Self::literal), None, Precedence::None),
             TokenType::Var => (None, None, Precedence::None),
             TokenType::While => (None, None, Precedence::None),
             TokenType::Error => (None, None, Precedence::None),
@@ -204,6 +204,15 @@ impl<'p> Parser<'p> {
             TokenType::Slash => self.emit_byte(chunk, OpCode::Divide),
             _ => {}
         };
+    }
+
+    fn literal(&mut self, chunk: &mut Chunk) {
+        match self.previous().typ {
+            TokenType::False => self.emit_byte(chunk, OpCode::False),
+            TokenType::Nil => self.emit_byte(chunk, OpCode::Nil),
+            TokenType::True => self.emit_byte(chunk, OpCode::True),
+            _ => {}
+        }
     }
 
     fn number(&mut self, chunk: &mut Chunk) {

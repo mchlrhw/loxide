@@ -25,6 +25,10 @@ impl Vm {
         Self::default()
     }
 
+    fn reset_stack(&mut self) {
+        self.stack = vec![];
+    }
+
     fn incr_ip(&mut self) -> usize {
         let before = self.ip;
         self.ip += 1;
@@ -42,6 +46,16 @@ impl Vm {
         let idx = self.read_byte(chunk) as usize;
 
         &chunk.constants()[idx]
+    }
+
+    fn peek(&self, distance: usize) -> Option<&Value> {
+        self.stack.get(self.stack.len() - 1 - distance)
+    }
+
+    fn runtime_error(&mut self, message: &str, chunk: &Chunk) {
+        let line = chunk.lines()[self.ip - 1];
+        eprintln!("{message}\n[line {line}] in script");
+        self.reset_stack();
     }
 
     fn run(&mut self, chunk: Chunk) -> Result<()> {
@@ -64,9 +78,14 @@ impl Vm {
 
             macro_rules! binary_op {
                 ($op:tt) => {
-                    let b = self.stack.pop().expect("stack mut have values");
-                    let a = self.stack.pop().expect("stack mut have values");
-                    self.stack.push(a $op b);
+                    if let (Some(Value::Number(_)), Some(Value::Number(_))) = (self.peek(0), self.peek(1)) {
+                        let b = self.stack.pop().expect("stack mut have values");
+                        let a = self.stack.pop().expect("stack mut have values");
+                        self.stack.push(a $op b);
+                    } else {
+                        self.runtime_error("Operands must be numbers.", &chunk);
+                        return Err(Error::Runtime);
+                    }
                 }
             }
 
@@ -74,6 +93,15 @@ impl Vm {
                 OpCode::Constant => {
                     let constant = self.read_constant(&chunk);
                     self.stack.push(constant.clone());
+                }
+                OpCode::Nil => {
+                    self.stack.push(Value::Nil);
+                }
+                OpCode::True => {
+                    self.stack.push(Value::Boolean(true));
+                }
+                OpCode::False => {
+                    self.stack.push(Value::Boolean(false));
                 }
                 OpCode::Add => {
                     binary_op!(+);
@@ -88,8 +116,13 @@ impl Vm {
                     binary_op!(/);
                 }
                 OpCode::Negate => {
-                    let value = self.stack.pop().expect("stack must have values");
-                    self.stack.push(-value);
+                    if let Some(Value::Number(_)) = self.peek(0) {
+                        let value = self.stack.pop().expect("stack must have values");
+                        self.stack.push(-value);
+                    } else {
+                        self.runtime_error("Operand must be a number.", &chunk);
+                        return Err(Error::Runtime);
+                    }
                 }
                 OpCode::Return => {
                     if let Some(value) = self.stack.pop() {

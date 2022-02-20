@@ -14,6 +14,9 @@ type Result<T> = std::result::Result<T, Error>;
 #[repr(u8)]
 pub enum OpCode {
     Constant = 0,
+    Nil,
+    True,
+    False,
     Add,
     Subtract,
     Multiply,
@@ -26,6 +29,9 @@ impl fmt::Display for OpCode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Constant => write!(f, "OP_CONSTANT"),
+            Self::Nil => write!(f, "OP_NIL"),
+            Self::True => write!(f, "OP_TRUE"),
+            Self::False => write!(f, "OP_FALSE"),
             Self::Add => write!(f, "OP_ADD"),
             Self::Subtract => write!(f, "OP_SUBTRACT"),
             Self::Multiply => write!(f, "OP_MULTIPLY"),
@@ -62,6 +68,9 @@ impl OpCode {
 
                 offset + 2
             }
+            Self::Nil => simple_intruction(self, offset),
+            Self::True => simple_intruction(self, offset),
+            Self::False => simple_intruction(self, offset),
             Self::Add => simple_intruction(self, offset),
             Self::Subtract => simple_intruction(self, offset),
             Self::Multiply => simple_intruction(self, offset),
@@ -90,6 +99,10 @@ impl Chunk {
 
     pub fn constants(&self) -> &[Value] {
         &self.constants
+    }
+
+    pub fn lines(&self) -> &[usize] {
+        &self.lines
     }
 
     pub fn write<B: Into<u8>>(&mut self, byte: B, line: usize) {
